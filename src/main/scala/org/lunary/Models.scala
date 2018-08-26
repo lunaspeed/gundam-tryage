@@ -31,7 +31,10 @@ object Models {
   case class UnknownType(basic: Basic, typeClasses: Set[String]) extends Card
 
 
-  val oaSets = ListMap("168011" -> "OPERATION ACE 1弾")
+  val oaSets = ListMap(
+    "168011" -> "OPERATION ACE 1弾",
+    "168012" -> "OPERATION ACE 2弾")
+
   val vsSets = ListMap(
     "168605" -> "VS IGNITION 5弾",
     "168604" -> "VS IGNITION 4弾",

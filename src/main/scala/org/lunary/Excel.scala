@@ -5,9 +5,6 @@ import java.io.{File, FileOutputStream}
 import com.typesafe.config.Config
 import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.poi.common.usermodel.HyperlinkType
-import org.apache.poi.ss.SpreadsheetVersion
-import org.apache.poi.ss.usermodel.{Comment, CreationHelper, Hyperlink}
-import org.apache.poi.ss.util.{AreaReference, CellReference}
 import org.apache.poi.xssf.usermodel.{XSSFRow, XSSFSheet, XSSFWorkbook}
 import org.lunary.Models._
 
