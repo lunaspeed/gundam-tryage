@@ -103,22 +103,20 @@ object Parsers {
     val basic = extractBasic(e)
     val attr = extractAttribute(e)
     val s = s1(e) _
+    val so = s1Opt(e) _
     val pilotName = s("dd.PlName").text.toSome
     val special = s("li.spPower").text.trim.toInt
     val cost = s("li.spPower").text.trim.toInt
     val space = s("li.pSpace").text.trim
     val ground = s("li.pGrand").text.trim
-    val water = s("li.p3").text.toSome
-    val forest = s("li.p4").text.toSome
-    val desert = s("li.p5").text.toSome
+    val water = so("li.p3").flatMap(_.text.toSome)
+    val forest = so("li.p4").flatMap(_.text.toSome)
+    val desert = so("li.p5").flatMap(_.text.toSome)
     val wazaName = s("dd.wazaName").text.trim
-    val mecName = s("dd.MecName").text.toSome
-    val aceEffect = s("dd.aceEffect").text.toSome
+    val mecName = so("dd.MecName").flatMap(_.text.toSome)
+    val aceEffect = so("dd.aceEffect").flatMap(_.text.toSome)
     val abilities = s("li.abiName").text.trim.split("/").toList
-    val text = (select(e |>> "li.txt").headOption match {
-      case Some(e) => e
-      case None => select1(e |>> "li.txt-bw")
-    }).text.trim
+    val text = so("li.txt").fold(s("li.txt-bw"))(identity).text.trim
 
     //s("li.txt").text
 
@@ -179,12 +177,13 @@ iv class="frame BgPllist "><!--パイロットカード-->
     val basic = extractBasic(e)
     val attr = extractAttribute(e)
     val s = s1(e) _
+    val so = s1Opt(e) _
     val burst = s("ul.burst")
     val burstName = select1(burst > "li.bName" >> "td").text.trim
     val burstLevel = select1(burst > "li.bLv").text.trim.toInt
     //TODO extract type from image src
     val burstType = select1(burst > "li.bType" > "img").attr("src").trim
-    val aceEffect = s("dd.aceEffect").text.toSome
+    val aceEffect = so("dd.aceEffect").flatMap(_.text.toSome)
     val (skill, text) = extractSkillAndText(e)
 
     Pilot(basic,
@@ -308,7 +307,18 @@ iv class="frame BgPllist "><!--パイロットカード-->
     (skill, text)
   }
 
-  def s1(e: Element)(evaluator: String): Element = select1(e |>> evaluator)
+  def s1(e: Element)(evaluator: String): Element = try {
+    select1(e |>> evaluator)
+  }
+  catch {
+    case e: NoSuchElementException =>
+      println("selector not found: " + evaluator)
+      throw e
+  }
+
+  def s1Opt(e: Element)(evaluator: String): Option[Element] =
+    select(e |>> evaluator).headOption
+
 
   implicit class MyString(s: String) {
     def toSome(): Option[String] = s.trim match {
@@ -316,4 +326,6 @@ iv class="frame BgPllist "><!--パイロットカード-->
       case _ => Some(s)
     }
   }
+
+
 }

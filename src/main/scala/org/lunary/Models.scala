@@ -103,10 +103,19 @@ object Models {
     "168901" -> "プロモーションカード"
   )
 
-  val combinedSets = oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
+//  val combinedSets = oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
+//
+//  val setGroups = "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
 
-  val setGroups = "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
+  val origSetsCht = ListMap(
+    "448003" -> "第3弾",
+    "448002" -> "第2弾",
+    "448001" -> "第1弾"
+  )
 
+  val combinedSets = origSetsCht
+
+  val setGroups = "orig" -> origSetsCht :: Nil
 
 
 }
