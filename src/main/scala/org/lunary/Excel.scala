@@ -11,9 +11,9 @@ import org.lunary.Models._
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 
-class Excel(implicit config: Config) {
+class Excel(config: Config)(implicit areaConfig: AreaConfig) {
 
-  private val imageBase = config.getString("gundam.urlBase")
+  private val imageBase = areaConfig.urlBase
   private val startingCell = 1
 
   def generate(file: File, sets: ListMap[String, String], client: CloseableHttpClient): Unit = {

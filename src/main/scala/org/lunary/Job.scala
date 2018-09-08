@@ -2,23 +2,22 @@ package org.lunary
 
 import java.security.SecureRandom
 
-import com.typesafe.config.Config
 import org.apache.commons.io.IOUtils
 import org.apache.http.client.entity.UrlEncodedFormEntity
 import org.apache.http.client.methods.{CloseableHttpResponse, HttpPost}
 import org.apache.http.impl.client.{BasicCookieStore, CloseableHttpClient, HttpClientBuilder}
 import org.apache.http.message.BasicNameValuePair
+import org.lunary.Models.AreaConfig
 
 import collection.JavaConverters._
 
-class Job(implicit config: Config) {
+class Job(implicit config: AreaConfig) {
 
   private val rand = new SecureRandom
 
   def request(category: String, client: CloseableHttpClient): String = {
 
-
-    val searchUrl = config.getString("gundam.searchUrl")
+    val searchUrl = config.searchUrl
     var resp: CloseableHttpResponse = null
     val post = new HttpPost(searchUrl)
 
@@ -35,8 +34,8 @@ class Job(implicit config: Config) {
 
     post.setEntity(form)
     post.addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-    post.addHeader("Host", config.getString("gundam.domain"))
-    post.addHeader("Origin", config.getString("gundam.urlBase"))
+    post.addHeader("Host", config.domain)
+    post.addHeader("Origin", config.urlBase)
     post.addHeader("Referer", searchUrl)
     post.addHeader("Upgrade-Insecure-Requests", "1")
     post.addHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.79 Safari/537.36")
@@ -47,7 +46,7 @@ class Job(implicit config: Config) {
 
       val time = System.currentTimeMillis() - start
 
-      println(s"query ${Models.combinedSets(category)} spent $time ms")
+      println(s"query ${config.areaSets.combinedSets(category)} spent $time ms")
       IOUtils.toString(resp.getEntity.getContent, "UTF-8")
 
     }

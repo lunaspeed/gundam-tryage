@@ -5,13 +5,11 @@ import Selectors._
 import cats.data.NonEmptyList
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
-import org.jsoup.select.Evaluator
 import org.lunary.Models._
 
 import collection.JavaConverters._
 
 object Parsers {
-
 
   def parse(html: String): List[Card] = {
     val doc = Jsoup.parse(html)
@@ -326,6 +324,5 @@ iv class="frame BgPllist "><!--パイロットカード-->
       case _ => Some(s)
     }
   }
-
 
 }
