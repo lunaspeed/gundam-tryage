@@ -103,9 +103,9 @@ object Models {
     "168901" -> "プロモーションカード"
   )
 
-//  val combinedSets = oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
-//
-//  val setGroups = "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
+  private val combinedSets = oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
+
+  private val setGroups = "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
 
   val origSetsCht = ListMap(
     "448003" -> "第3弾",
@@ -113,9 +113,24 @@ object Models {
     "448001" -> "第1弾"
   )
 
-  val combinedSets = origSetsCht
+  private val combinedSetsAsia = origSetsCht
 
-  val setGroups = "orig" -> origSetsCht :: Nil
+  private val setGroupsAsia = "orig" -> origSetsCht :: Nil
 
 
+  val JAPAN_SETS = AreaSets(combinedSets, setGroups)
+  val ASIA_SETS = AreaSets(combinedSetsAsia, setGroupsAsia)
+
+  case class AreaSets(combinedSets: ListMap[String, String], setGroups: List[(String, ListMap[String, String])])
+
+  case class AreaConfig(domain: String, urlBase: String, searchUrl: String, filePrefix: String, areaSets: AreaSets)
+  object AreaConfig {
+    import com.typesafe.config.Config
+    def apply(config: Config, areaSets: AreaSets): AreaConfig = AreaConfig(
+      config.getString("domain"),
+      config.getString("urlBase"),
+      config.getString("searchUrl"),
+      config.getString("filePrefix"),
+      areaSets)
+  }
 }
