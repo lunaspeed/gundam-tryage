@@ -10,23 +10,30 @@ object Main {
   def main(arg: Array[String]): Unit = {
 
     val areaSets = if(arg.isEmpty) {
-      List("japan", "asia")
+      List(Japan, Asia)
     }
     else {
-      arg.toList
+      arg.map { s =>
+        if (s.toLowerCase.startsWith("j")) {
+          Japan
+        }
+        else {
+          Asia
+        }
+      }.toList
     }
 
     val config = ConfigFactory.load()
     val folder = new File(config.getString("fileDirectory"))
     val client = Job.createHttpClient()
 
-    for(areaSet <- areaSets) {
+    areaSets.foreach { implicit area =>
 
-      implicit val area = AreaConfig(config.getConfig(s"gundam.$areaSet"), if(areaSet == "japan") JAPAN_SETS else ASIA_SETS)
+      implicit val areaConfig = AreaConfig(config.getConfig(s"gundam.${area.configName}"), area)
 
-      area.areaSets.setGroups.par.foreach {
+      area.setGroups.par.foreach {
         case (groupSymbol, sets) =>
-          val file = new File(folder, s"${area.filePrefix}-gundam-tryage-$groupSymbol.xlsx")
+          val file = new File(folder, s"${areaConfig.filePrefix}-gundam-tryage-$groupSymbol.xlsx")
           val excel = new Excel(config)
           excel.generate(file, sets, client)
       }
