@@ -15,6 +15,7 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
 
   private val imageBase = areaConfig.urlBase
   private val startingCell = 1
+  private val area = areaConfig.area
 
   def generate(file: File, sets: ListMap[String, String], client: CloseableHttpClient): Unit = {
 
@@ -26,9 +27,8 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
 
     val job = new Job
 
-    val msSheet = book.createSheet("モビルスーツ")
-    val pilotSheet = book.createSheet("パイロット")
-
+    val msSheet = book.createSheet(area.sheetNameMobileSuit)
+    val pilotSheet = book.createSheet(area.sheetNamePilot)
 
     val msCards = new ListBuffer[MobileSuit]
     val pilotCards = new ListBuffer[Pilot]
@@ -49,7 +49,7 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
     writeMS(msSheet, msCards)
     writePilot(pilotSheet, pilotCards)
     if(!ignitionCards.isEmpty) {
-      val ignitionSheet = book.createSheet("イグニッション")
+      val ignitionSheet = book.createSheet(area.sheetNameIgnition)
       writeIgnition(ignitionSheet, ignitionCards)
     }
 
@@ -76,13 +76,14 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
 
     implicit val s = sheet
     val titleRow = sheet.createRow(0)
-    (titleBegin ++ List("パイロット名",
-      "ＨＰ", "アタック", "スピード", "必殺技", "必殺威力", "必殺コスト",
-    "宇宙適性", "地上適性", "水中適性", "森林適性", "砂漠適性",
-    "アビリティ名", "アビリティ", "ACE", "開発系統")).zipWithIndex foreach {
+    (titleBegin ++ area.mobileSuitTitles).zipWithIndex foreach {
       case (s, i) =>
         titleRow.createCell(startingCell - 1 + i).setCellValue(s)
     }
+    //List("パイロット名",
+    //      "ＨＰ", "アタック", "スピード", "必殺技", "必殺威力", "必殺コスト",
+    //    "宇宙適性", "地上適性", "水中適性", "森林適性", "砂漠適性",
+    //    "アビリティ名", "アビリティ", "ACE", "開発系統")
 
     cards.sortBy(_.basic.cardNo).zipWithIndex.foreach {
       case (ms, i) =>
@@ -128,21 +129,19 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
 //    table.setDisplayName("MS Table")
 //    table.setName("MS Table")
 
-
-
-
   }
 
   def writePilot(sheet: XSSFSheet, cards: Seq[Pilot])(implicit wb: XSSFWorkbook): Unit = {
     implicit val s = sheet
 
     val titleRow = sheet.createRow(0)
-    (titleBegin ++ List(
-      "ＨＰ", "アタック", "スピード", "バースト", "バーストの種類", "バーストレベル",
-      "スキル名", "スキル", "ACE")).zipWithIndex foreach {
+    (titleBegin ++ area.ignitionTitles).zipWithIndex foreach {
       case (s, i) =>
         titleRow.createCell(startingCell - 1 + i).setCellValue(s)
     }
+    //List(
+    //      "ＨＰ", "アタック", "スピード", "バースト", "バーストの種類", "バーストレベル",
+    //      "スキル名", "スキル", "ACE")
 
 
     cards.sortBy(_.basic.cardNo).zipWithIndex.foreach {
@@ -170,12 +169,13 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
   def writeIgnition(sheet: XSSFSheet, cards: Seq[Ignition])(implicit wb: XSSFWorkbook): Unit = {
     implicit val s = sheet
     val titleRow = sheet.createRow(0)
-    (titleBegin ++ List("パイロット名",
-      "必殺技", "必殺威力",
-      "効果名", "効果", "パイロットスキル名", "パイロットスキル")).zipWithIndex foreach {
+    (titleBegin ++ area.ignitionTitles).zipWithIndex foreach {
       case (s, i) =>
         titleRow.createCell(startingCell - 1 + i).setCellValue(s)
     }
+    //List("パイロット名",
+    //      "必殺技", "必殺威力",
+    //      "効果名", "効果", "パイロットスキル名", "パイロットスキル")
 
 
     cards.sortBy(_.basic.cardNo).zipWithIndex.foreach {
@@ -241,13 +241,13 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
 
   def getBurstType(imageLink: String): String =
     if(imageLink.endsWith("burst-atk.png")) {
-      "アタック"
+      area.burstAttack//"アタック"
     }
     else if(imageLink.endsWith("burst-def.png")) {
-      "ディフェンス"
+      area.burstDefence//"ディフェンス"
     }
     else if(imageLink.endsWith("burst-spd.png")) {
-      "スピード"
+      area.burstSpeed//"スピード"
     }
     else {
       "Unknown"
@@ -255,5 +255,5 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
 
 
 
-  val titleBegin = List("所有する", "弾", "カード番号", "レアリティ", "カード名", "画像")
+  val titleBegin = area.baseTitles//List("所有する", "弾", "カード番号", "レアリティ", "カード名", "画像")
 }

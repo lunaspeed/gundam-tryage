@@ -46,7 +46,7 @@ class Job(implicit config: AreaConfig) {
 
       val time = System.currentTimeMillis() - start
 
-      println(s"query ${config.areaSets.combinedSets(category)} spent $time ms")
+      println(s"query ${config.area.combinedSets(category)} spent $time ms")
       IOUtils.toString(resp.getEntity.getContent, "UTF-8")
 
     }
