@@ -11,13 +11,13 @@ import collection.JavaConverters._
 
 object Parsers {
 
-  def parse(html: String): List[Card] = {
+  def parse(html: String): Either[Throwable, List[Card]] = {
     val doc = Jsoup.parse(html)
     val list = select1(doc |>> "div#list")
 
     val divs = select(list > "div")
 
-    val cards: Stream[Card] = divs map { d =>
+    val cards = divs map { d =>
 
       val cardType = select1(d > "div.frame")
 
@@ -40,12 +40,15 @@ object Parsers {
       }
       catch {
         case e: Throwable => println("current element " + d.html())
-          throw e
+          Left(e)
       }
 
     }
 
-    cards.toList
+    cards.find(_.isLeft) match {
+      case Some(Left(e)) => Left(e)
+      case None => Right(cards.flatMap(_.toOption).toList)
+    }
 
   }
 
@@ -97,32 +100,36 @@ object Parsers {
        <!--プロモ-->
    </div>
    */
-  def extractMobileSuit(e: Element): MobileSuit = {
-    val basic = extractBasic(e)
-    val attr = extractAttribute(e)
-    val s = s1(e) _
-    val so = s1Opt(e) _
-    val pilotName = s("dd.PlName").text.toSome
-    val special = s("li.spPower").text.trim.toInt
-    val cost = s("li.spPower").text.trim.toInt
-    val space = s("li.pSpace").text.trim
-    val ground = s("li.pGrand").text.trim
-    val water = so("li.p3").flatMap(_.text.toSome)
-    val forest = so("li.p4").flatMap(_.text.toSome)
-    val desert = so("li.p5").flatMap(_.text.toSome)
-    val wazaName = s("dd.wazaName").text.trim
-    val mecName = so("dd.MecName").flatMap(_.text.toSome)
-    val aceEffect = so("dd.aceEffect").flatMap(_.text.toSome)
-    val abilities = s("li.abiName").text.trim.split("/").toList
-    val text = so("li.txt").fold(s("li.txt-bw"))(identity).text.trim
+  def extractMobileSuit(e: Element): Either[Throwable, MobileSuit] = {
+    try {
+      val basic = extractBasic(e)
+      val attr = extractAttribute(e)
+      val s = s1(e) _
+      val so = s1Opt(e) _
+      val pilotName = s("dd.PlName").text.toSome
+      val special = s("li.spPower").text.trim.toInt
+      val cost = s("li.spPower").text.trim.toInt
+      val space = s("li.pSpace").text.trim
+      val ground = s("li.pGrand").text.trim
+      val water = so("li.p3").flatMap(_.text.toSome)
+      val forest = so("li.p4").flatMap(_.text.toSome)
+      val desert = so("li.p5").flatMap(_.text.toSome)
+      val wazaName = s("dd.wazaName").text.trim
+      val mecName = so("dd.MecName").flatMap(_.text.toSome)
+      val aceEffect = so("dd.aceEffect").flatMap(_.text.toSome)
+      val abilities = s("li.abiName").text.trim.split("/").toList
+      val text = so("li.txt").fold(s("li.txt-bw"))(identity).text.trim
 
-    //s("li.txt").text
+      //s("li.txt").text
 
-    MobileSuit(basic,
-      pilotName, attr, special: Int, cost: Int,
-      PowerRank(space, ground, water, forest, desert),
-      wazaName, mecName, aceEffect, NonEmptyList(abilities.head, abilities.tail), text)
-
+      Right(MobileSuit(basic,
+        pilotName, attr, special: Int, cost: Int,
+        PowerRank(space, ground, water, forest, desert),
+        wazaName, mecName, aceEffect, NonEmptyList(abilities.head, abilities.tail), text))
+    }
+    catch {
+      case e: Throwable => Left(e)
+    }
   }
 
   /*
@@ -171,24 +178,28 @@ iv class="frame BgPllist "><!--パイロットカード-->
 
                         </div>
    */
-  def extractPilot(e: Element): Pilot = {
-    val basic = extractBasic(e)
-    val attr = extractAttribute(e)
-    val s = s1(e) _
-    val so = s1Opt(e) _
-    val burst = s("ul.burst")
-    val burstName = select1(burst > "li.bName" >> "td").text.trim
-    val burstLevel = select1(burst > "li.bLv").text.trim.toInt
-    //TODO extract type from image src
-    val burstType = select1(burst > "li.bType" > "img").attr("src").trim
-    val aceEffect = so("dd.aceEffect").flatMap(_.text.toSome)
-    val (skill, text) = extractSkillAndText(e)
+  def extractPilot(e: Element): Either[Throwable, Pilot] = {
+    try {
+      val basic = extractBasic(e)
+      val attr = extractAttribute(e)
+      val s = s1(e) _
+      val so = s1Opt(e) _
+      val burst = s("ul.burst")
+      val burstName = select1(burst > "li.bName" >> "td").text.trim
+      val burstLevel = select1(burst > "li.bLv").text.trim.toInt
+      //TODO extract type from image src
+      val burstType = select1(burst > "li.bType" > "img").attr("src").trim
+      val aceEffect = so("dd.aceEffect").flatMap(_.text.toSome)
+      val (skill, text) = extractSkillAndText(e)
 
-    Pilot(basic,
-      attr,
-      burstName, burstLevel, burstType, aceEffect,
-      skill, text)
-
+      Right(Pilot(basic,
+        attr,
+        burstName, burstLevel, burstType, aceEffect,
+        skill, text))
+    }
+    catch {
+      case e: Throwable => Left(e)
+    }
   }
 
   /*
@@ -245,31 +256,41 @@ iv class="frame BgPllist "><!--パイロットカード-->
                                              </dl>
          <!--イグニッションEnd--></div>
    */
-  def extractIgnition(e: Element, hasPilotSkill: Boolean): Ignition = {
-    val basic = extractBasic(e)
-    val s = s1(e) _
-    val wazaName = s("dd.wazaName").text.trim
-    val special = s("dd.spPower").text.trim.toInt
-    val pilotName = s("dd.PlName").text.trim
-    val (effectSkill, effectText) = extractSkillAndText(select1(e |>> "ul.ignEffect"))
+  def extractIgnition(e: Element, hasPilotSkill: Boolean): Either[Throwable, Ignition] = {
+    try {
+      val basic = extractBasic(e)
+      val s = s1(e) _
+      val wazaName = s("dd.wazaName").text.trim
+      val special = s("dd.spPower").text.trim.toInt
+      val pilotName = s("dd.PlName").text.trim
+      val (effectSkill, effectText) = extractSkillAndText(select1(e |>> "ul.ignEffect"))
 
-    val (pilotSkill, pilotSkillText) = if(hasPilotSkill) {
-      val (ps, pt) = extractSkillAndText(select1(e |>> "ul.ignPlSkill"))
-      (Some(ps), Some(pt))
+      val (pilotSkill, pilotSkillText) = if (hasPilotSkill) {
+        val (ps, pt) = extractSkillAndText(select1(e |>> "ul.ignPlSkill"))
+        (Some(ps), Some(pt))
+      }
+      else {
+        (None, None)
+      }
+      Right(Ignition(basic: Basic,
+        wazaName, special, pilotName,
+        effectSkill, effectText, pilotSkill, pilotSkillText))
     }
-    else {
-      (None, None)
+    catch {
+      case e: Throwable => Left(e)
     }
-    Ignition(basic: Basic,
-      wazaName, special, pilotName,
-      effectSkill, effectText, pilotSkill, pilotSkillText)
   }
 
-  def extractUnknownType(e: Element): UnknownType = {
-    val basic = extractBasic(e)
-    val cardType = select1(e > "div.frame")
-    val classes = cardType.classNames().asScala - "frame"
-    UnknownType(basic, classes.toSet)
+  def extractUnknownType(e: Element): Either[Throwable, UnknownType] = {
+    try {
+      val basic = extractBasic(e)
+      val cardType = select1(e > "div.frame")
+      val classes = cardType.classNames().asScala - "frame"
+      Right(UnknownType(basic, classes.toSet))
+    }
+    catch {
+      case e: Throwable => Left(e)
+    }
   }
 
   def extractBasic(e: Element): Basic = {

@@ -2,14 +2,20 @@ package org.lunary
 
 import java.io.{File, FileOutputStream}
 
+import com.softwaremill.sttp.SttpBackend
 import com.typesafe.config.Config
-import org.apache.http.impl.client.CloseableHttpClient
+
+import scala.concurrent.ExecutionContext
+//import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.poi.common.usermodel.HyperlinkType
 import org.apache.poi.xssf.usermodel.{XSSFRow, XSSFSheet, XSSFWorkbook}
 import org.lunary.Models._
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.Future
+import cats.data.EitherT
+import cats.implicits._
 
 class Excel(config: Config)(implicit areaConfig: AreaConfig) {
 
@@ -17,60 +23,109 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
   private val startingCell = 1
   private val area = areaConfig.area
 
-  def generate(file: File, sets: ListMap[String, String], client: CloseableHttpClient): Unit = {
+  def generate(sets: ListMap[String, String])(implicit sttpBackend: SttpBackend[Future, Nothing], ec: ExecutionContext): Future[Either[Throwable, XSSFWorkbook]] = {
 
     implicit val book = new XSSFWorkbook()
-
-    if(file.exists() && config.getBoolean("deleteExistingFile")) {
-      file.delete()
-    }
 
     val job = new Job
 
     val msSheet = book.createSheet(area.sheetNameMobileSuit)
     val pilotSheet = book.createSheet(area.sheetNamePilot)
 
-    val msCards = new ListBuffer[MobileSuit]
-    val pilotCards = new ListBuffer[Pilot]
-    val ignitionCards = new ListBuffer[Ignition]
-    val unknownCards = new ListBuffer[UnknownType]
+    val setResults = Future.sequence(sets.toList.reverse map { set =>
+      genCategory(set._1, job)
+    })
 
-    sets.toList.reverse.flatMap {
-      case (category, _) =>
-        val html = job.request(category, client)
-        Parsers.parse(html)
-    } foreach {
-      case ms: MobileSuit => msCards += ms
-      case p: Pilot => pilotCards += p
-      case i: Ignition => ignitionCards += i
-      case u: UnknownType => unknownCards += u
-    }
+    setResults.map { list =>
+      list.find(_.isLeft) match {
+        case Some(Left(e)) => Left(e)
+        case None =>
 
-    writeMS(msSheet, msCards)
-    writePilot(pilotSheet, pilotCards)
-    if(!ignitionCards.isEmpty) {
-      val ignitionSheet = book.createSheet(area.sheetNameIgnition)
-      writeIgnition(ignitionSheet, ignitionCards)
-    }
+          val cards = list.flatMap(_.toOption)
+            .reduce((c1, c2) => Cards(c1.mobileSuits ++ c2.mobileSuits, c1.pilots ++ c2.pilots, c1.ignitions ++ c2.ignitions, c1.unknowns ++ c2.unknowns))
 
-    if(!unknownCards.isEmpty) {
-      val unknownSheet = book.createSheet("Unknown")
-      writeUnknown(unknownSheet, unknownCards)
-    }
+          writeMS(msSheet, cards.mobileSuits)
+          writePilot(pilotSheet, cards.pilots)
+          if (!cards.ignitions.isEmpty) {
+            val ignitionSheet = book.createSheet(area.sheetNameIgnition)
+            writeIgnition(ignitionSheet, cards.ignitions)
+          }
+          if (!cards.unknowns.isEmpty) {
+            val unknownSheet = book.createSheet("Unknown")
+            writeUnknown(unknownSheet, cards.unknowns)
+          }
 
-
-    var fos: FileOutputStream = null
-    try {
-      fos = new FileOutputStream(file)
-      book.write(fos)
-    }
-    finally {
-      if(fos != null) {
-        fos.close()
+          Right(book)
       }
+
     }
+//    val t = for {
+//      i <- sets.toList.reverse
+//      (category, _) = i
+//      htmlResponse <- job.request(category)
+//      html <- htmlResponse.body
+//      parsedItem <- Parsers.parse(html)
+//    } yield {
+//      val msCards = new ListBuffer[MobileSuit]
+//      val pilotCards = new ListBuffer[Pilot]
+//      val ignitionCards = new ListBuffer[Ignition]
+//      val unknownCards = new ListBuffer[UnknownType]
+//      parsedItem match {
+//        case ms: MobileSuit => msCards += ms
+//        case p: Pilot => pilotCards += p
+//        case i: Ignition => ignitionCards += i
+//        case u: UnknownType => unknownCards += u
+//      }
+//      writeMS(msSheet, msCards)
+//      writePilot(pilotSheet, pilotCards)
+//      if(!ignitionCards.isEmpty) {
+//        val ignitionSheet = book.createSheet(area.sheetNameIgnition)
+//        writeIgnition(ignitionSheet, ignitionCards)
+//      }
+//
+//      if(!unknownCards.isEmpty) {
+//        val unknownSheet = book.createSheet("Unknown")
+//        writeUnknown(unknownSheet, unknownCards)
+//      }
+//      var fos: FileOutputStream = null
+//      try {
+//        fos = new FileOutputStream(file)
+//        book.write(fos)
+//      }
+//      finally {
+//        if(fos != null) {
+//          fos.close()
+//        }
+//      }
+//      1
+//    }
 
   }
+
+  case class Cards(mobileSuits: List[MobileSuit], pilots: List[Pilot], ignitions: List[Ignition], unknowns: List[UnknownType])
+
+  def genCategory(category: String, job: Job)(implicit ec: ExecutionContext): Future[Either[Throwable, Cards]] = {
+    (for {
+      html <- EitherT(job.request(category))
+      parsedItems <- EitherT.fromEither[Future](Parsers.parse(html))
+    } yield {
+      val msCards = new ListBuffer[MobileSuit]
+      val pilotCards = new ListBuffer[Pilot]
+      val ignitionCards = new ListBuffer[Ignition]
+      val unknownCards = new ListBuffer[UnknownType]
+      parsedItems.foreach {
+        _ match {
+          case ms: MobileSuit => msCards += ms
+          case p: Pilot => pilotCards += p
+          case i: Ignition => ignitionCards += i
+          case u: UnknownType => unknownCards += u
+        }
+      }
+      Cards(msCards.toList, pilotCards.toList, ignitionCards.toList, unknownCards.toList)
+    }).value
+
+  }
+
 
   def writeMS(sheet: XSSFSheet, cards: Seq[MobileSuit])(implicit wb: XSSFWorkbook): Unit = {
 
@@ -219,7 +274,7 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
   }
 
 
-  def writeBasic(startColumn: Int, basic: Basic, row: XSSFRow)(implicit wb: XSSFWorkbook, sheet: XSSFSheet): Int = {
+  private def writeBasic(startColumn: Int, basic: Basic, row: XSSFRow)(implicit wb: XSSFWorkbook, sheet: XSSFSheet): Int = {
 
 
     row.createCell(startColumn).setCellValue(basic.set)
