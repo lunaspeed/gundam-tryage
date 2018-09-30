@@ -7,7 +7,7 @@ version := "1.0"
 //)
 
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.7"
 
 libraryDependencies ++= List(
   "org.apache.httpcomponents" % "httpclient" % "4.5.6",
