@@ -32,7 +32,7 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
     val msSheet = book.createSheet(area.sheetNameMobileSuit)
     val pilotSheet = book.createSheet(area.sheetNamePilot)
 
-    val setResults = Future.sequence(sets.toList.reverse map { set =>
+    val setResults: Future[List[Either[Throwable, Cards]]] = Future.sequence(sets.toList.reverse map { set =>
       genCategory(set._1, job)
     })
 

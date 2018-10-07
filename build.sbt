@@ -7,7 +7,7 @@ version := "1.0"
 //)
 
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.7"
 val sttpVersion = "1.3.3"
 
 libraryDependencies ++= List(

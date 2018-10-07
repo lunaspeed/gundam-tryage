@@ -8,20 +8,23 @@ import org.jsoup.nodes.Element
 import org.lunary.Models._
 
 import collection.JavaConverters._
+import scala.util.Try
 
 object Parsers {
 
   def parse(html: String): Either[Throwable, List[Card]] = {
     val doc = Jsoup.parse(html)
-    val list = select1(doc |>> "div#list")
 
-    val divs = select(list > "div")
+    (Try {
+      val list = select1(doc |>> "div#list")
 
-    val cards = divs map { d =>
+      select(list > "div")
+    } map { divs =>
 
-      val cardType = select1(d > "div.frame")
+      val cards = divs map { d =>
 
-      try {
+        val cardType = select1(d > "div.frame")
+
         if (cardType.hasClass("BgMslist") || cardType.hasClass("BgMslist02")) {
           extractMobileSuit(d)
         }
@@ -37,18 +40,17 @@ object Parsers {
         else {
           extractUnknownType(d)
         }
-      }
-      catch {
-        case e: Throwable => println("current element " + d.html())
-          Left(e)
+
+
       }
 
-    }
-
-    cards.find(_.isLeft) match {
-      case Some(Left(e)) => Left(e)
-      case None => Right(cards.flatMap(_.toOption).toList)
-    }
+      cards.find(_.isLeft) match {
+        case Some(Left(e)) => Left(e)
+        case None => Right(cards.flatMap(_.toOption).toList)
+      }
+    }).recover({
+      case e: Throwable => Left(e)
+    }).get
 
   }
 

@@ -55,8 +55,12 @@ object Main {
         workbook.map(writeToFile(_, file, deleteExisting))
     }
 
+
+
     val res = Await.result(Future.sequence(writeResults), 30 minutes)
 
+    sttpBackend.close()
+    
     for (r <- res) {
       r match {
         case Left(e) => println(e)
