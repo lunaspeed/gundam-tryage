@@ -34,7 +34,8 @@ object Models {
   val oaSets = ListMap(
     "168011" -> "OPERATION ACE 1弾",
     "168012" -> "OPERATION ACE 2弾",
-    "168013" -> "OPERATION ACE 3弾")
+    "168013" -> "OPERATION ACE 3弾",
+    "168014" -> "OPERATION ACE 4弾")
 
   val vsSets = ListMap(
     "168605" -> "VS IGNITION 5弾",
