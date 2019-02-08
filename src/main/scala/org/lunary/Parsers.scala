@@ -8,10 +8,32 @@ import org.jsoup.nodes.Element
 import org.lunary.Models._
 
 import collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
+import scala.util.Try
 
 object Parsers {
 
-  def parse(html: String): List[Card] = {
+  def toCategoryCards(cards: List[Card]): CategoryCards = {
+    val msCards = new ListBuffer[MobileSuit]
+    val pilotCards = new ListBuffer[Pilot]
+    val ignitionCards = new ListBuffer[Ignition]
+    val unknownCards = new ListBuffer[UnknownType]
+
+    cards foreach {
+      case ms: MobileSuit => msCards += ms
+      case p: Pilot => pilotCards += p
+      case i: Ignition => ignitionCards += i
+      case u: UnknownType => unknownCards += u
+    }
+
+    CategoryCards(msCards.toList, pilotCards.toList, ignitionCards.toList, unknownCards.toList)
+  }
+
+  //val parseAsCategoryCards: String => CategoryCards = parse _ andThen toCategoryCards
+
+  def parseAsCategoryCards(html: String): Either[Throwable, CategoryCards] = parse(html) map toCategoryCards
+
+  def parse(html: String): Either[Throwable, List[Card]] = Try {
     val doc = Jsoup.parse(html)
     val list = select1(doc |>> "div#list")
 
@@ -47,8 +69,7 @@ object Parsers {
 
     cards.toList
 
-  }
-
+  }.toEither
 
 
   /*
@@ -253,7 +274,7 @@ iv class="frame BgPllist "><!--パイロットカード-->
     val pilotName = s("dd.PlName").text.trim
     val (effectSkill, effectText) = extractSkillAndText(select1(e |>> "ul.ignEffect"))
 
-    val (pilotSkill, pilotSkillText) = if(hasPilotSkill) {
+    val (pilotSkill, pilotSkillText) = if (hasPilotSkill) {
       val (ps, pt) = extractSkillAndText(select1(e |>> "ul.ignPlSkill"))
       (Some(ps), Some(pt))
     }

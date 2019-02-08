@@ -8,6 +8,10 @@ import scala.collection.immutable.ListMap
 object Models {
 
 
+  implicit val cardOrdering = new Ordering[Card] {
+    override def compare(x: Card, y: Card): Int = x.basic.cardNo.compareTo(y.basic.cardNo)
+  }
+
   sealed trait Card {
     def basic: Basic
   }
@@ -33,6 +37,14 @@ object Models {
                       effectSkill: String, effectText: String, pilotSkill: Option[String], pilotSkillText: Option[String]) extends Card
 
   case class UnknownType(basic: Basic, typeClasses: Set[String]) extends Card
+
+  case class CategoryCards(mobileSuits: List[MobileSuit], pilots: List[Pilot], ignitions: List[Ignition], unknowns: List[UnknownType]) {
+    def add(cc: CategoryCards): CategoryCards =
+      CategoryCards(mobileSuits ++ cc.mobileSuits, pilots ++ cc.pilots, ignitions ++ cc.ignitions, unknowns ++ cc.unknowns)
+
+    def sort(): CategoryCards = CategoryCards(mobileSuits.sorted(cardOrdering), pilots.sorted(cardOrdering), ignitions.sorted(cardOrdering), unknowns.sorted(cardOrdering))
+  }
+  val EmptyCategoryCards = CategoryCards(Nil, Nil, Nil, Nil)
 
 
   val oaSets = ListMap(
