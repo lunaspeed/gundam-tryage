@@ -13,17 +13,21 @@ object Models {
   }
 
   case class Basic(set: String, cardNo: String, name: String, rarity: Option[String], image: String)
+
   case class Attribute(hp: Int, power: Int, speed: Int)
+
   case class PowerRank(space: String, ground: String, water: Option[String], forest: Option[String], desert: Option[String])
 
   case class MobileSuit(basic: Basic,
                         pilotName: Option[String], attribute: Attribute, special: Int, cost: Int,
                         powerRank: PowerRank,
                         wazaName: String, mecName: Option[String], aceEffect: Option[String], abilities: NonEmptyList[String], text: String) extends Card
+
   case class Pilot(basic: Basic,
                    attribute: Attribute,
                    burstName: String, burstLevel: Int, burstType: String, aceEffect: Option[String],
                    skill: String, text: String) extends Card
+
   case class Ignition(basic: Basic,
                       wazaName: String, special: Int, pilotName: String,
                       effectSkill: String, effectText: String, pilotSkill: Option[String], pilotSkillText: Option[String]) extends Card
@@ -32,11 +36,11 @@ object Models {
 
 
   val oaSets = ListMap(
-    "168011" -> "OPERATION ACE 1弾",
-    "168012" -> "OPERATION ACE 2弾",
-    "168013" -> "OPERATION ACE 3弾",
+    "168015" -> "OPERATION ACE 5弾",
     "168014" -> "OPERATION ACE 4弾",
-    "168015" -> "OPERATION ACE 5弾")
+    "168013" -> "OPERATION ACE 3弾",
+    "168012" -> "OPERATION ACE 2弾",
+    "168011" -> "OPERATION ACE 1弾")
 
   val vsSets = ListMap(
     "168605" -> "VS IGNITION 5弾",
@@ -108,27 +112,31 @@ object Models {
 
   //private val combinedSets = oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
 
-//  private val setGroups = "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
+  //  private val setGroups = "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
 
   val origSetsCht = ListMap(
+    "448004" -> "第4弾",
     "448003" -> "第3弾",
     "448002" -> "第2弾",
     "448001" -> "第1弾"
   )
 
-//  private val combinedSetsAsia = origSetsCht
-//
-//  private val setGroupsAsia = "orig" -> origSetsCht :: Nil
+  //  private val combinedSetsAsia = origSetsCht
+  //
+  //  private val setGroupsAsia = "orig" -> origSetsCht :: Nil
 
 
-//  val JAPAN_SETS = AreaSets(combinedSets, setGroups)
-//  val ASIA_SETS = AreaSets(combinedSetsAsia, setGroupsAsia)
-//
-//  case class AreaSets(combinedSets: ListMap[String, String], setGroups: List[(String, ListMap[String, String])])
+  //  val JAPAN_SETS = AreaSets(combinedSets, setGroups)
+  //  val ASIA_SETS = AreaSets(combinedSetsAsia, setGroupsAsia)
+  //
+  //  case class AreaSets(combinedSets: ListMap[String, String], setGroups: List[(String, ListMap[String, String])])
 
   case class AreaConfig(domain: String, urlBase: String, searchUrl: String, filePrefix: String, area: Area)
+
   object AreaConfig {
+
     import com.typesafe.config.Config
+
     def apply(config: Config, area: Area): AreaConfig = AreaConfig(
       config.getString("domain"),
       config.getString("urlBase"),
@@ -141,7 +149,7 @@ object Models {
 
     val configName: String
 
-    val combinedSets:ListMap[String, String]
+    val combinedSets: ListMap[String, String]
     val setGroups: List[(String, ListMap[String, String])]
 
     val sheetNameMobileSuit: String
@@ -218,4 +226,5 @@ object Models {
     override val burstDefence: String = "Defence"
     override val burstSpeed: String = "Speed"
   }
+
 }
