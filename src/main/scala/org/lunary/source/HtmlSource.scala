@@ -11,6 +11,7 @@ import org.apache.http.client.methods.{CloseableHttpResponse, HttpPost}
 import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.http.message.BasicNameValuePair
 import org.lunary.Models.AreaConfig
+import org.lunary.sink.HtmlPersistSink
 
 import collection.JavaConverters._
 import scala.util.Try
@@ -24,7 +25,7 @@ class FileHtmlSource(directory: Path, config: AreaConfig) extends HtmlSource {
 
   override def loadHtml(category: String): Either[Throwable, String] = {
 
-    val filename = s"${config.filePrefix}_${category}.html"
+    val filename = HtmlPersistSink.getHtmlFilename(category, config)
 
     val file = directory.resolve(filename)
     if (Files.isRegularFile(file)) {

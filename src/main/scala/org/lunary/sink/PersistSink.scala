@@ -1,5 +1,6 @@
 package org.lunary.sink
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 
 import org.apache.logging.log4j.scala.Logging
@@ -35,4 +36,29 @@ class ExcelPersistSink(directory: Path, areaConfig: AreaConfig, deleteExistingFi
     }
 
   }
+}
+
+class HtmlPersistSink(directory: Path, areaConfig: AreaConfig, deleteExistingFile: Boolean = false) extends PersistSink[String] {
+
+  override def persist(category: String, data: String): Unit = {
+
+    Try {
+      val file = directory.resolve(HtmlPersistSink.getHtmlFilename(category, areaConfig))
+
+      if (Files.exists(file) && deleteExistingFile) {
+        Files.delete(file)
+      }
+
+      Files.write(file, data.getBytes(StandardCharsets.UTF_8))
+    } match {
+      case Success(_) => logger.info(s"category: $category finished saving html")
+      case Failure(e) => logger.error(s"category: $category failed to save html", e)
+    }
+
+  }
+}
+
+object HtmlPersistSink {
+
+  def getHtmlFilename(category: String, areaConfig: AreaConfig): String = s"${areaConfig.filePrefix}-gundam-tryage-$category.html"
 }
