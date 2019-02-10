@@ -4,23 +4,22 @@ import java.nio.file.Paths
 
 import com.typesafe.config.ConfigFactory
 import org.apache.logging.log4j.scala.Logging
+import org.lunary.Main.args2AreaSets
 import org.lunary.Models._
-import org.lunary.sink.{ExcelPersistSink, PersistSink, SlickPersistSink}
+import org.lunary.sink._
 import org.lunary.source.{HtmlSource, HttpClientHtmlSource}
 import slick.jdbc.MySQLProfile.api._
 
 import scala.collection.immutable.ListMap
-import scala.concurrent.ExecutionContext.Implicits.global
 
 object Main extends Logging {
 
-  def main(arg: Array[String]): Unit = {
-
-    val areaSets = if(arg.isEmpty) {
+  def args2AreaSets(args: Array[String]): List[Area] = {
+    if(args.isEmpty) {
       List(Japan, Asia)
     }
     else {
-      arg.map { s =>
+      args.map { s =>
         if (s.toLowerCase.startsWith("j")) {
           Japan
         }
@@ -29,12 +28,15 @@ object Main extends Logging {
         }
       }.toList
     }
+  }
+
+  def main(args: Array[String]): Unit = {
+
+    val areaSets = args2AreaSets(args)
 
     val config = ConfigFactory.load()
     val directory = Paths.get(config.getString("fileDirectory"))
     val client = Job.createHttpClient()
-
-
 
     areaSets.foreach { implicit area =>
 
@@ -76,5 +78,36 @@ object Main extends Logging {
       case Left(e) => logger.error(s"failed to process group: $groupSymbol", e)
     }
 
+  }
+}
+
+object SaveHtml extends Logging {
+  def main(args: Array[String]): Unit = {
+    val areaSets = args2AreaSets(args)
+
+    val config = ConfigFactory.load()
+    val directory = Paths.get(config.getString("fileDirectory"))
+    val client = Job.createHttpClient()
+
+    areaSets.foreach { implicit area =>
+
+      val areaConfig = AreaConfig(config.getConfig(s"gundam.${area.configName}"), area)
+
+      val source = new HttpClientHtmlSource(client, areaConfig)
+      //val sink = new SlickPersistSink(areaConfig, db)
+      val sink = new HtmlPersistSink(directory, areaConfig, config.getBoolean("deleteExistingFile"))
+      area.setGroups.par.foreach {
+        case (_, sets) =>
+           sets.foreach{
+             case (category, categoryName) =>
+               source.loadHtml(category).map(sink.persist(category, _)) match {
+                 case Left(e) => logger.error(s"failed to save $categoryName:$category as html", e)
+                 case _ =>
+               }
+           }
+      }
+    }
+
+    client.close()
   }
 }
