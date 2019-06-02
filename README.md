@@ -11,8 +11,9 @@ Data grouped by set group:
 6. 鉄華繚乱
 7. VS IGNITION
 8. OPERATION ACE
+9. DELTA WARS
 
-See application.conf for settings.
+See [application.conf](src/main/resources/application.conf) for settings.
 
 Run
 ```bash
