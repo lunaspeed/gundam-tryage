@@ -5,6 +5,7 @@ import java.io.{File, FileOutputStream}
 import com.typesafe.config.Config
 import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.poi.common.usermodel.HyperlinkType
+import org.apache.poi.ss.util.CellRangeAddress
 import org.apache.poi.xssf.usermodel.{XSSFRow, XSSFSheet, XSSFWorkbook}
 import org.lunary.Models._
 
@@ -21,9 +22,11 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
 
     implicit val book = new XSSFWorkbook()
 
-    if(file.exists() && config.getBoolean("deleteExistingFile")) {
+    if (file.exists() && config.getBoolean("deleteExistingFile")) {
       file.delete()
     }
+
+    val generateTransformed = config.getBoolean("generateTransformed")
 
     val job = new Job
 
@@ -46,14 +49,14 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
       case u: UnknownType => unknownCards += u
     }
 
-    writeMS(msSheet, msCards)
+    writeMS(msSheet, msCards, generateTransformed)
     writePilot(pilotSheet, pilotCards)
-    if(!ignitionCards.isEmpty) {
+    if (!ignitionCards.isEmpty) {
       val ignitionSheet = book.createSheet(area.sheetNameIgnition)
       writeIgnition(ignitionSheet, ignitionCards)
     }
 
-    if(!unknownCards.isEmpty) {
+    if (!unknownCards.isEmpty) {
       val unknownSheet = book.createSheet("Unknown")
       writeUnknown(unknownSheet, unknownCards)
     }
@@ -65,14 +68,14 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
       book.write(fos)
     }
     finally {
-      if(fos != null) {
+      if (fos != null) {
         fos.close()
       }
     }
 
   }
 
-  def writeMS(sheet: XSSFSheet, cards: Seq[MobileSuit])(implicit wb: XSSFWorkbook): Unit = {
+  def writeMS(sheet: XSSFSheet, cards: Seq[MobileSuit], generateTransformed: Boolean = false)(implicit wb: XSSFWorkbook): Unit = {
 
     implicit val s = sheet
     val titleRow = sheet.createRow(0)
@@ -80,54 +83,58 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
       case (s, i) =>
         titleRow.createCell(startingCell - 1 + i).setCellValue(s)
     }
-    //List("パイロット名",
-    //      "ＨＰ", "アタック", "スピード", "必殺技", "必殺威力", "必殺コスト",
-    //    "宇宙適性", "地上適性", "水中適性", "森林適性", "砂漠適性",
-    //    "アビリティ名", "アビリティ", "ACE", "開発系統")
 
-    cards.sortBy(_.basic.cardNo).zipWithIndex.foreach {
-      case (ms, i) =>
-        val row = sheet.createRow(i + 1)
+    cards.sortBy(_.basic.cardNo).foldLeft(1) {
+      case (i, ms) =>
+        val row = sheet.createRow(i)
 
-        val start = writeBasic(startingCell, ms.basic, row)
+        writeRow(row, ms)
+        if (generateTransformed) {
+          i + ms.transformed.fold(1) { ms =>
+            val row2 = sheet.createRow(i + 1)
+            writeRow(row2, ms)
+            sheet.addMergedRegion(new CellRangeAddress(i, i + 1, 0, 0))
+            sheet.addMergedRegion(new CellRangeAddress(i, i + 1, 1, 1))
+            sheet.addMergedRegion(new CellRangeAddress(i, i + 1, 2, 2))
+            sheet.addMergedRegion(new CellRangeAddress(i, i + 1, 3, 3))
+            2
+          }
+        }
+        else {
+          i + 1
+        }
 
-        ms.pilotName foreach { row.createCell(start + 1).setCellValue(_) }
-        //attribute
-        row.createCell(start + 2).setCellValue(ms.attribute.hp)
-        row.createCell(start + 3).setCellValue(ms.attribute.power)
-        row.createCell(start + 4).setCellValue(ms.attribute.speed)
-        //waza
-        row.createCell(start + 5).setCellValue(ms.wazaName)
-        row.createCell(start + 6).setCellValue(ms.special)
-        row.createCell(start + 7).setCellValue(ms.cost)
-
-        //power rank
-        row.createCell(start + 8).setCellValue(ms.powerRank.space)
-        row.createCell(start + 9).setCellValue(ms.powerRank.ground)
-        ms.powerRank.water.foreach(row.createCell(start + 10).setCellValue(_))
-        ms.powerRank.forest.foreach(row.createCell(start + 11).setCellValue(_))
-        ms.powerRank.desert.foreach(row.createCell(start + 12).setCellValue(_))
-
-
-        row.createCell(start + 13).setCellValue(ms.abilities.toList.mkString(","))
-        row.createCell(start + 14).setCellValue(ms.text)
-        ms.aceEffect.foreach(row.createCell(start + 15).setCellValue(_))
-        ms.mecName.foreach(row.createCell(start + 16).setCellValue(_))
     }
 
-//    val ref = new AreaReference(new CellReference(0, 0), new CellReference(cards.size, 22), SpreadsheetVersion.EXCEL2007)
-//    val table = sheet.createTable()
-//    val cttable = table.getCTTable
-//    cttable.setRef(ref.formatAsString())
-//    cttable.setHeaderRowCount(1)
-//    cttable.addNewAutoFilter()
-//    cttable.setName("MS Table")
-//    cttable.setDisplayName("MS Table")
-//    val columns = cttable.addNewTableColumns()
-//    columns.setCount(22)
-//    table.setCellReferences(ref)
-//    table.setDisplayName("MS Table")
-//    table.setName("MS Table")
+    def writeRow(row: XSSFRow, ms: MobileSuit): Unit = {
+
+      val start = writeBasic(startingCell, ms.basic, row)
+
+      ms.pilotName foreach {
+        row.createCell(start + 1).setCellValue(_)
+      }
+      //attribute
+      row.createCell(start + 2).setCellValue(ms.attribute.hp)
+      row.createCell(start + 3).setCellValue(ms.attribute.power)
+      row.createCell(start + 4).setCellValue(ms.attribute.speed)
+      //waza
+      row.createCell(start + 5).setCellValue(ms.wazaName)
+      row.createCell(start + 6).setCellValue(ms.special)
+      row.createCell(start + 7).setCellValue(ms.cost)
+
+      //power rank
+      row.createCell(start + 8).setCellValue(ms.powerRank.space)
+      row.createCell(start + 9).setCellValue(ms.powerRank.ground)
+      ms.powerRank.water.foreach(row.createCell(start + 10).setCellValue(_))
+      ms.powerRank.forest.foreach(row.createCell(start + 11).setCellValue(_))
+      ms.powerRank.desert.foreach(row.createCell(start + 12).setCellValue(_))
+
+
+      row.createCell(start + 13).setCellValue(ms.abilities.toList.mkString(","))
+      row.createCell(start + 14).setCellValue(ms.text)
+      ms.aceEffect.foreach(row.createCell(start + 15).setCellValue(_))
+      ms.mecName.foreach(row.createCell(start + 16).setCellValue(_))
+    }
 
   }
 
@@ -135,13 +142,10 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
     implicit val s = sheet
 
     val titleRow = sheet.createRow(0)
-    (titleBegin ++ area.ignitionTitles).zipWithIndex foreach {
+    (titleBegin ++ area.pilotTitles).zipWithIndex foreach {
       case (s, i) =>
         titleRow.createCell(startingCell - 1 + i).setCellValue(s)
     }
-    //List(
-    //      "ＨＰ", "アタック", "スピード", "バースト", "バーストの種類", "バーストレベル",
-    //      "スキル名", "スキル", "ACE")
 
 
     cards.sortBy(_.basic.cardNo).zipWithIndex.foreach {
@@ -163,6 +167,10 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
         row.createCell(start + 7).setCellValue(p.skill)
         row.createCell(start + 8).setCellValue(p.text)
         p.aceEffect.foreach(row.createCell(start + 9).setCellValue(_))
+        p.exAwaken.foreach { aw =>
+          row.createCell(start + 10).setCellValue(aw.name)
+          row.createCell(start + 11).setCellValue(aw.requirement.replace("EX覚醒条件：", ""))
+        }
     }
   }
 
@@ -173,10 +181,6 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
       case (s, i) =>
         titleRow.createCell(startingCell - 1 + i).setCellValue(s)
     }
-    //List("パイロット名",
-    //      "必殺技", "必殺威力",
-    //      "効果名", "効果", "パイロットスキル名", "パイロットスキル")
-
 
     cards.sortBy(_.basic.cardNo).zipWithIndex.foreach {
       case (ig, i) =>
@@ -221,7 +225,6 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
 
   def writeBasic(startColumn: Int, basic: Basic, row: XSSFRow)(implicit wb: XSSFWorkbook, sheet: XSSFSheet): Int = {
 
-
     row.createCell(startColumn).setCellValue(basic.set)
     row.createCell(startColumn + 1).setCellValue(basic.cardNo)
     basic.rarity.foreach(row.createCell(startColumn + 2).setCellValue(_))
@@ -240,20 +243,19 @@ class Excel(config: Config)(implicit areaConfig: AreaConfig) {
   }
 
   def getBurstType(imageLink: String): String =
-    if(imageLink.endsWith("burst-atk.png")) {
-      area.burstAttack//"アタック"
+    if (imageLink.endsWith("burst-atk.png")) {
+      area.burstAttack //"アタック"
     }
-    else if(imageLink.endsWith("burst-def.png")) {
-      area.burstDefence//"ディフェンス"
+    else if (imageLink.endsWith("burst-def.png")) {
+      area.burstDefence //"ディフェンス"
     }
-    else if(imageLink.endsWith("burst-spd.png")) {
-      area.burstSpeed//"スピード"
+    else if (imageLink.endsWith("burst-spd.png")) {
+      area.burstSpeed //"スピード"
     }
     else {
       "Unknown"
     }
 
 
-
-  val titleBegin = area.baseTitles//List("所有する", "弾", "カード番号", "レアリティ", "カード名", "画像")
+  val titleBegin = area.baseTitles //List("所有する", "弾", "カード番号", "レアリティ", "カード名", "画像")
 }

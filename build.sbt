@@ -16,7 +16,8 @@ libraryDependencies ++= List(
   "info.henix" %% "ssoup" % "0.5",
   "commons-io" % "commons-io" % "2.6",
   "com.typesafe" % "config" % "1.3.3",
-  "org.typelevel" %% "cats-core" % "1.0.1")
+  "org.typelevel" %% "cats-core" % "1.0.1",
+  "org.scalatest" %% "scalatest" % "3.0.5" % Test)
 
 
 
