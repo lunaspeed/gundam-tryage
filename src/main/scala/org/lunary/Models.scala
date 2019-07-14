@@ -204,35 +204,5 @@ object Models {
     override val burstSpeed: String = "スピード"
   }
 
-  case object Asia extends Area {
-
-    override val configName = "asia"
-
-    override val combinedSets = origSetsCht
-    override val setGroups = "orig" -> origSetsCht :: Nil
-
-    override val sheetNameMobileSuit = "MS機體"
-    override val sheetNamePilot = "駕駛員"
-    override val sheetNameIgnition = "Ignition"
-
-    override val baseTitles: List[String] = List("擁有", "弾數", "卡號", "稀有度", "卡名", "圖片")
-
-    override val mobileSuitTitles = List("駕駛員名稱",
-      "HP", "ATK", "SPD", "必殺技", "必殺威力", "必殺Cost",
-      "宇宙適性", "地上適性", "水中適性", "森林適性", "砂漠適性",
-      "MS機體能力名", "MS機體能力", "ACE", "開發系統")
-
-    override val pilotTitles: List[String] = List(
-      "HP", "ATK", "SPD", "爆發", "爆發種類", "爆發Lv",
-      "駕駛員能力名", "駕駛員能力", "ACE")
-
-    override val ignitionTitles: List[String] = List("駕駛員名",
-      "必殺技", "必殺威力",
-      "効果名", "効果", "駕駛員能力名", "駕駛員能力")
-
-    override val burstAttack: String = "Attack"
-    override val burstDefence: String = "Defence"
-    override val burstSpeed: String = "Speed"
-  }
 
 }
