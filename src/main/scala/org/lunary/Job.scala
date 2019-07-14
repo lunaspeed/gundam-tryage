@@ -10,12 +10,13 @@ import org.apache.http.message.BasicNameValuePair
 import org.lunary.Models.AreaConfig
 
 import collection.JavaConverters._
+import scala.util.Try
 
-class Job(implicit config: AreaConfig) {
+class Job(config: AreaConfig) {
 
   private val rand = new SecureRandom
 
-  def request(category: String, client: CloseableHttpClient): String = {
+  def request(category: String, client: CloseableHttpClient): Either[Throwable, String] = {
 
     val searchUrl = config.searchUrl
     var resp: CloseableHttpResponse = null
@@ -40,7 +41,7 @@ class Job(implicit config: AreaConfig) {
     post.addHeader("Upgrade-Insecure-Requests", "1")
     post.addHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.79 Safari/537.36")
 
-    try {
+    val result = Try {
       val start = System.currentTimeMillis()
       resp = client.execute(post)
 
@@ -48,11 +49,13 @@ class Job(implicit config: AreaConfig) {
 
       println(s"query ${config.area.combinedSets(category)} spent $time ms")
       IOUtils.toString(resp.getEntity.getContent, "UTF-8")
-
     }
-    finally {
+
+    if(resp != null) {
       resp.close()
     }
+
+    result.toEither
   }
 
 }

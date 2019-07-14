@@ -8,19 +8,22 @@ import org.jsoup.nodes.Element
 import org.lunary.Models._
 
 import collection.JavaConverters._
+import scala.util.{Failure, Try}
 
 object Parsers {
 
-  def parse(html: String): List[Card] = {
+  case class ParseException(html: String, cause: Throwable) extends RuntimeException(s"failed to parse: $html", cause)
+
+  def parse(html: String): Either[Throwable, List[Card]] = {
 
     val doc = Jsoup.parse(html)
     val list = select1(doc |>> "div#list")
 
     val divs = select(list > "div")
 
-    val cards: Stream[Card] = divs map { d =>
+    val cards: Stream[Either[Throwable, Card]] = divs map { d =>
 
-      try {
+      Try {
         select(d > "div.carddateCol").headOption match {
           case Some(cardType) =>
             if (cardType.hasClass("mscardCol")) {
@@ -46,18 +49,20 @@ object Parsers {
               case None =>
                 extractUnknownType(d, "")
             }
-
         }
-
-      }
-      catch {
-        case e: Throwable => println("current element " + d.html())
-          throw e
-      }
+      }.recoverWith {
+        case t: Throwable => Failure[Card](ParseException(d.html, t))
+      }.toEither
 
     }
 
-    cards.toList
+    cards.foldLeft[Either[Throwable, List[Card]]](Right(Nil)) { (r, c) =>
+      (r, c) match {
+        case (Right(cards), Right(card)) => Right(cards :+ card)
+        case (l @ Left(_), _) => l
+        case (_, l @ Left(_)) => l.asInstanceOf[Either[Throwable, List[Card]]]
+      }
+    }
   }
 
   def extractMobileSuit(e: Element): MobileSuit = {
