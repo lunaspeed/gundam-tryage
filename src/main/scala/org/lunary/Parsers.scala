@@ -8,7 +8,7 @@ import org.jsoup.nodes.Element
 import org.lunary.Models._
 
 import collection.JavaConverters._
-import scala.util.{Failure, Try}
+import scala.util.Try
 
 object Parsers {
 
@@ -23,36 +23,32 @@ object Parsers {
 
     val cards: Stream[Either[Throwable, Card]] = divs map { d =>
 
-      Try {
-        select(d > "div.carddateCol").headOption match {
-          case Some(cardType) =>
-            if (cardType.hasClass("mscardCol")) {
-              extractMobileSuit(d)
-            }
-            else if (cardType.hasClass("plcardCol")) {
-              extractPilot(d)
-            } else {
-              extractUnknownType(d, "carddateCol")
-            }
-          case None =>
-            select(d > "div.frame").headOption match {
-              case Some(cardType) =>
-                if (cardType.hasClass("BgIgnlist")) {
-                  extractIgnition(d, false)
-                }
-                else if (cardType.hasClass("BgIgnlist02")) {
-                  extractIgnition(d, true)
-                }
-                else {
-                  extractUnknownType(cardType, "frame")
-                }
-              case None =>
-                extractUnknownType(d, "")
-            }
-        }
-      }.recoverWith {
-        case t: Throwable => Failure[Card](ParseException(d.html, t))
-      }.toEither
+      (select(d > "div.carddateCol").headOption match {
+        case Some(cardType) =>
+          if (cardType.hasClass("mscardCol")) {
+            extractMobileSuit(d)
+          }
+          else if (cardType.hasClass("plcardCol")) {
+            extractPilot(d)
+          } else {
+            extractUnknownType(d, "carddateCol")
+          }
+        case None =>
+          select(d > "div.frame").headOption match {
+            case Some(cardType) =>
+              if (cardType.hasClass("BgIgnlist")) {
+                extractIgnition(d, false)
+              }
+              else if (cardType.hasClass("BgIgnlist02")) {
+                extractIgnition(d, true)
+              }
+              else {
+                extractUnknownType(cardType, "frame")
+              }
+            case None =>
+              extractUnknownType(d, "")
+          }
+      }).left.map(t => ParseException(d.html, t))
 
     }
 
@@ -65,7 +61,7 @@ object Parsers {
     }
   }
 
-  def extractMobileSuit(e: Element): MobileSuit = {
+  def extractMobileSuit(e: Element): Either[Throwable, MobileSuit] = Try {
     val basic = extractBasicNew(e)
 
     def toMs(info1: Element): MobileSuit = {
@@ -111,9 +107,10 @@ object Parsers {
     val secondPart = select(e |>> "div.info1col_v").headOption
 
     (secondPart map toMs).fold(firstMs)(sec => firstMs.copy(transformed = Some(sec)))
-  }
+  }.toEither
 
-  def extractPilot(e: Element): Pilot = {
+
+  def extractPilot(e: Element): Either[Throwable, Pilot] = Try {
     val basic = extractBasicNew(e)
     val attr = extractAttribute(e)
     val info1 = select1(e |>> "div.info1col")
@@ -150,10 +147,9 @@ object Parsers {
       attr,
       burstName, burstLevel, burstType, aceEffect,
       skill, text, awaken)
+  }.toEither
 
-  }
-
-  def extractIgnition(e: Element, hasPilotSkill: Boolean): Ignition = {
+  def extractIgnition(e: Element, hasPilotSkill: Boolean): Either[Throwable, Ignition] = Try {
     val basic = extractBasic(e)
     val s = s1(e) _
     val wazaName = s("dd.wazaName").text.trim
@@ -171,14 +167,14 @@ object Parsers {
     Ignition(basic: Basic,
       wazaName, special, pilotName,
       effectSkill, effectText, pilotSkill, pilotSkillText)
-  }
+  }.toEither
 
-  def extractUnknownType(e: Element, clazz: String): UnknownType = {
+  def extractUnknownType(e: Element, clazz: String): Either[Throwable, UnknownType] = Try {
     val basic = extractBasicNew(e)
     val cardType = select1(e > s"div.$clazz")
     val classes = cardType.classNames().asScala - clazz
     UnknownType(basic, classes.toSet)
-  }
+  }.toEither
 
   def extractBasicNew(e: Element): Basic = {
     
@@ -229,14 +225,7 @@ object Parsers {
     (skill, text)
   }
 
-  def s1(e: Element)(evaluator: String): Element = try {
-    select1(e |>> evaluator)
-  }
-  catch {
-    case e: NoSuchElementException =>
-      println("selector not found: " + evaluator)
-      throw e
-  }
+  def s1(e: Element)(evaluator: String): Element = select1(e |>> evaluator)
 
   def s1Opt(e: Element)(evaluator: String): Option[Element] =
     select(e |>> evaluator).headOption
