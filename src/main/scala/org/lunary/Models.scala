@@ -7,7 +7,6 @@ import scala.collection.immutable.ListMap
 
 object Models {
 
-
   sealed trait Card {
     def basic: Basic
   }

@@ -42,7 +42,5 @@ object Main {
       println(s"error: ${error._2 + 1}: ")
       error._1.printStackTrace()
     }
-    
-
   }
 }

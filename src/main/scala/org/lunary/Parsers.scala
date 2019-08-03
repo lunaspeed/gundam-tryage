@@ -12,220 +12,216 @@ import scala.util.Try
 
 object Parsers {
 
+  type ParseResult = Either[Throwable, List[Option[Card]]]
+
   case class ParseException(html: String, cause: Throwable) extends RuntimeException(s"failed to parse: $html", cause)
 
-  def parse(html: String): Either[Throwable, List[Card]] = {
+  //select1有side effect
+  def selectOne(elements: Iterator[Element]): Option[Element] = select(elements).headOption
+
+  def parse(html: String): ParseResult = {
 
     val doc = Jsoup.parse(html)
-    val list = select1(doc |>> "div#list")
+    val result: Option[ParseResult] = selectOne(doc |>> "div#list") map { list: Element =>
 
-    val divs = select(list > "div")
+      val divs = select(list > "div")
 
-    val cards: Stream[Either[Throwable, Card]] = divs map { d =>
+      val cards: Stream[ParseResult] = divs map { d =>
 
-      (select(d > "div.carddateCol").headOption match {
-        case Some(cardType) =>
-          if (cardType.hasClass("mscardCol")) {
-            extractMobileSuit(d)
-          }
-          else if (cardType.hasClass("plcardCol")) {
-            extractPilot(d)
-          } else {
-            extractUnknownType(d, "carddateCol")
-          }
-        case None =>
-          select(d > "div.frame").headOption match {
-            case Some(cardType) =>
-              if (cardType.hasClass("BgIgnlist")) {
-                extractIgnition(d, false)
-              }
-              else if (cardType.hasClass("BgIgnlist02")) {
-                extractIgnition(d, true)
-              }
-              else {
-                extractUnknownType(cardType, "frame")
-              }
-            case None =>
-              extractUnknownType(d, "")
-          }
-      }).left.map(t => ParseException(d.html, t))
+        (select(d > "div.carddateCol").headOption match {
+          case Some(cardType) =>
+            if (cardType.hasClass("mscardCol")) {
+              extractMobileSuit(d)
+            }
+            else if (cardType.hasClass("plcardCol")) {
+              extractPilot(d)
+            } else {
+              extractUnknownType(d, "carddateCol")
+            }
+          case None =>
+            select(d > "div.frame").headOption match {
+              case Some(cardType) =>
+                if (cardType.hasClass("BgIgnlist")) {
+                  extractIgnition(d, false)
+                }
+                else if (cardType.hasClass("BgIgnlist02")) {
+                  extractIgnition(d, true)
+                }
+                else {
+                  extractUnknownType(cardType, "frame")
+                }
+              case None =>
+                extractUnknownType(d, "")
+            }
+        }).left.map(t => ParseException(d.html, t)).asInstanceOf[ParseResult]
 
-    }
-
-    cards.foldLeft[Either[Throwable, List[Card]]](Right(Nil)) { (r, c) =>
-      (r, c) match {
-        case (Right(cards), Right(card)) => Right(cards :+ card)
-        case (l @ Left(_), _) => l
-        case (_, l @ Left(_)) => l.asInstanceOf[Either[Throwable, List[Card]]]
       }
+
+      val cardResult: ParseResult = cards.foldLeft[ParseResult](Right(Nil)) { (r, c) =>
+        (r, c) match {
+          case (Right(cards), Right(card)) => Right[Throwable, List[Option[Card]]](cards ++ card)
+          case (l@Left(_), _) => l
+          case (_, l@Left(_)) => l.asInstanceOf[ParseResult]
+        }
+      }
+      cardResult
     }
+    result.fold[ParseResult](Left(new RuntimeException("no div#list found")))(identity)
   }
 
-  def extractMobileSuit(e: Element): Either[Throwable, MobileSuit] = Try {
-    val basic = extractBasicNew(e)
+  def extractMobileSuit(e: Element): Either[Throwable, Option[MobileSuit]] = Try {
 
-    def toMs(info1: Element): MobileSuit = {
-
-      val info2 = select(info1 + "div.info2Col").head
-      val info3 = select(info2 + "div.info3Col").head
-
-      val attr = extractAttribute(info1)
-      val s = s1(info1) _
+    def toMs(basic: Basic, info1: Element, transformed: Option[MobileSuit]): Option[MobileSuit] = {
       val so = s1Opt(info1) _
+      for {
+        info2 <- selectOne(info1 + "div.info2Col")
+        info3 <- selectOne(info2 + "div.info3Col")
+        attr <- extractAttribute(info1)
+        pilotName = select(info2 |>> "img[alt='パイロット']").headOption.map { e =>
+          e.parent().nextElementSibling().text()
+        }
+        special <- so("li.spPower") //.text.trim.toInt
+        cost <- so("li.Cost") //.text.trim.toInt
+        space <- so("li.pSpace") //.text.trim
+        ground <- so("li.pGrand") //.text.trim
+        water = so("li.p3").flatMap(_.text.toSome)
+        forest = so("li.p4").flatMap(_.text.toSome)
+        desert = so("li.p5").flatMap(_.text.toSome)
+        wazaName <- so("dd.wazaName") //.text.trim
+        mecName = so("dd.MecName").flatMap(_.text.toSome)
+        aceEffect = select(info2 |>> "img[alt='エース効果']").headOption.map { e =>
+          e.parent().nextElementSibling().text()
+        }
+        abilityString <- selectOne(info3 >> "dt" > "p") //.text.trim.split("/").toList
+        abilities = abilityString.text.trim.split("/").toList
+        text <- selectOne(info3 >> "dd" > "p") //.text.trim
+      } yield {
+
+        MobileSuit(basic,
+          pilotName, attr, special.text.trim.toInt, cost.text.trim.toInt,
+          PowerRank(space.text.trim, ground.text.trim, water, forest, desert),
+          wazaName.text.trim, mecName, aceEffect, NonEmptyList(abilities.head, abilities.tail), text.text.trim,
+          transformed)
+      }
+    }
+
+    for {
+      basic <- extractBasicNew(e)
+      firstPart <- selectOne(e |>> "div.info1col")
+      secondPart = select(e |>> "div.info1col_v").headOption.flatMap(toMs(basic, _, None))
+      firstMs <- toMs(basic, firstPart, secondPart)
+    } yield firstMs
+  }.toEither
 
 
-      val pilotName = select(info2 |>> "img[alt='パイロット']").headOption.map { e =>
+  def extractPilot(e: Element): Either[Throwable, Option[Pilot]] = Try {
+    for {
+      basic <- extractBasicNew(e)
+      attr <- extractAttribute(e)
+      info1 <- selectOne(e |>> "div.info1col")
+      info2 <- selectOne(info1 + "div.info2Col")
+      info3 <- selectOne(info2 + "div.info3Col")
+
+      burst <- selectOne(info1 >> "dd.burstCol")
+      burstName <- selectOne(burst > "p.bName") //.text.trim
+      burstLevel <- selectOne(burst > "ul.burst" > "li.bLv") //.text.trim.toInt
+      burstType <- selectOne(burst >> "li.bType" > "img") //.attr("src").trim
+      aceEffect = selectOne(info2 |>> "img[alt='エース効果']").map { e =>
         e.parent().nextElementSibling().text()
       }
-
-      val special = s("li.spPower").text.trim.toInt
-      val cost = s("li.Cost").text.trim.toInt
-      val space = s("li.pSpace").text.trim
-      val ground = s("li.pGrand").text.trim
-      val water = so("li.p3").flatMap(_.text.toSome)
-      val forest = so("li.p4").flatMap(_.text.toSome)
-      val desert = so("li.p5").flatMap(_.text.toSome)
-      val wazaName = s("dd.wazaName").text.trim
-      val mecName = so("dd.MecName").flatMap(_.text.toSome)
-
-      val aceEffect = select(info2 |>> "img[alt='エース効果']").headOption.map { e =>
-        e.parent().nextElementSibling().text()
+      outer <- selectOne(info3 |>> "dt.pl")
+      skill <- selectOne(outer > "p") //.text()
+      text <- selectOne(outer.nextElementSibling() > "p") //.text()
+      info3Ex = selectOne(info3 + "div.ex")
+      awaken = info3Ex.flatMap { ex =>
+        for {
+          e <- selectOne(ex |>> "dt.ex")
+          name <- selectOne(e > "p") //.text
+          requirement <- selectOne(e.nextElementSibling() > "p") //.text
+        } yield ExAwaken(name.text, requirement.text)
       }
+    } yield {
 
-      val abilities = select1(info3 >> "dt" > "p").text.trim.split("/").toList
-      val text = select1(info3 >> "dd" > "p").text.trim
-
-      MobileSuit(basic,
-        pilotName, attr, special: Int, cost: Int,
-        PowerRank(space, ground, water, forest, desert),
-        wazaName, mecName, aceEffect, NonEmptyList(abilities.head, abilities.tail), text)
+      Pilot(basic,
+        attr,
+        burstName.text.trim, burstLevel.text.trim.toInt, burstType.attr("src").trim, aceEffect,
+        skill.text, text.text, awaken)
     }
-
-    val firstPart = select1(e |>> "div.info1col")
-    val firstMs = toMs(firstPart)
-
-    val secondPart = select(e |>> "div.info1col_v").headOption
-
-    (secondPart map toMs).fold(firstMs)(sec => firstMs.copy(transformed = Some(sec)))
   }.toEither
 
-
-  def extractPilot(e: Element): Either[Throwable, Pilot] = Try {
-    val basic = extractBasicNew(e)
-    val attr = extractAttribute(e)
-    val info1 = select1(e |>> "div.info1col")
-    val info2 = select(info1 + "div.info2Col").head
-    val info3 = select(info2 + "div.info3Col").head
-
-    val burst = select1(info1 >> "dd.burstCol")
-    val burstName = select1(burst > "p.bName").text.trim
-    val burstLevel = select1(burst > "ul.burst" > "li.bLv").text.trim.toInt
-    //TODO extract type from image src
-    val burstType = select1(burst >> "li.bType" > "img").attr("src").trim
-
-    val aceEffect = select(info2 |>> "img[alt='エース効果']").headOption.map { e =>
-      e.parent().nextElementSibling().text()
+  def extractIgnition(e: Element, hasPilotSkill: Boolean): Either[Throwable, Option[Ignition]] = Try {
+    val s = s1Opt(e) _
+    for {
+      basic <- extractBasic(e)
+      wazaName <- s("dd.wazaName") //.text.trim
+      special <- s("dd.spPower") //.text.trim.toInt
+      pilotName <- s("dd.PlName") //.text.trim
+      effectElement <- selectOne(e |>> "ul.ignEffect")
+      (effectSkill, effectText) <- extractSkillAndText(effectElement)
+      skillElement <- selectOne(e |>> "ul.ignPlSkill")
+      (pilotSkill, pilotSkillText) = if (hasPilotSkill) {
+        extractSkillAndText(skillElement).fold[(Option[String], Option[String])]((None, None)){ case (ps, pt) => (Some(ps), Some(pt)) }
+      }
+      else {
+        (None, None)
+      }
+    } yield {
+      Ignition(basic,
+        wazaName.text.trim, special.text.trim.toInt, pilotName.text.trim,
+        effectSkill, effectText, pilotSkill, pilotSkillText)
     }
-
-    val (skill, text) = {
-      val outer = select1(info3 |>> "dt.pl")
-      val skill = select1(outer > "p").text()
-      val text = select1(outer.nextElementSibling() > "p").text()
-      (skill, text)
-
-    }
-
-    val info3Ex = select(info3 + "div.ex").headOption
-    val awaken = info3Ex.map { ex =>
-      val e = select1(ex |>> "dt.ex")
-      val name = select1(e > "p").text
-      val requirement = select1(e.nextElementSibling() > "p").text
-      ExAwaken(name, requirement)
-    }
-
-    Pilot(basic,
-      attr,
-      burstName, burstLevel, burstType, aceEffect,
-      skill, text, awaken)
   }.toEither
 
-  def extractIgnition(e: Element, hasPilotSkill: Boolean): Either[Throwable, Ignition] = Try {
-    val basic = extractBasic(e)
-    val s = s1(e) _
-    val wazaName = s("dd.wazaName").text.trim
-    val special = s("dd.spPower").text.trim.toInt
-    val pilotName = s("dd.PlName").text.trim
-    val (effectSkill, effectText) = extractSkillAndText(select1(e |>> "ul.ignEffect"))
-
-    val (pilotSkill, pilotSkillText) = if (hasPilotSkill) {
-      val (ps, pt) = extractSkillAndText(select1(e |>> "ul.ignPlSkill"))
-      (Some(ps), Some(pt))
-    }
-    else {
-      (None, None)
-    }
-    Ignition(basic: Basic,
-      wazaName, special, pilotName,
-      effectSkill, effectText, pilotSkill, pilotSkillText)
+  def extractUnknownType(e: Element, clazz: String): Either[Throwable, Option[UnknownType]] = Try {
+    for {
+      basic <- extractBasicNew(e)
+      cardType <- selectOne(e > s"div.$clazz")
+      classes = cardType.classNames().asScala - clazz
+    } yield UnknownType(basic, classes.toSet)
   }.toEither
 
-  def extractUnknownType(e: Element, clazz: String): Either[Throwable, UnknownType] = Try {
-    val basic = extractBasicNew(e)
-    val cardType = select1(e > s"div.$clazz")
-    val classes = cardType.classNames().asScala - clazz
-    UnknownType(basic, classes.toSet)
-  }.toEither
-
-  def extractBasicNew(e: Element): Basic = {
-    
-    val firstPart = select1(e |>> "div.info1col")
-
-    val cardNo = select1(firstPart |>> "dd.cardNumber").text().trim
-
-    val set = cardNo.split('-')(0)
-
-    val name = select1(firstPart |>> "dd.charaName").text().trim
-
-    val rarity = select1(select1(e |>> "div.reaCol") |>> "dd").text().trim
-
-    val img = select1(e >> "div.cardCol" > "img").attr("src").trim
-
-    Basic(set, cardNo, name, Some(rarity), img)
+  def extractBasicNew(e: Element): Option[Basic] = for {
+    firstPart <- selectOne(e |>> "div.info1col")
+    cardNumber <- selectOne(firstPart |>> "dd.cardNumber") //.text().trim
+    cardNo = cardNumber.text().trim
+    set = cardNo.split('-')(0)
+    name <- selectOne(firstPart |>> "dd.charaName") //.text().trim
+    rarity <- selectOne(e |>> "div.reaCol") match {
+      case Some(e) => selectOne(e |>> "dd")
+      case _ => None
+    } //.text().trim
+    img <- selectOne(e >> "div.cardCol" > "img") //.attr("src").trim
+  } yield {
+    Basic(set, cardNo, name.text().trim, Some(rarity.text().trim), img.attr("src").trim)
   }
 
-  def extractBasic(e: Element): Basic = {
-
-    val cardNo = select1(e |>> "dd.cardNumber").text().trim
-
-    val set = cardNo.split('-')(0)
-
-    val name = select1(e |>> "dd.charaName").text().trim
-
-    val rarity = (select(e |>> "dd.PreaP").headOption match {
-      case Some(e) => e
-      case None => select1(e |>> "dd.reaP")
-    }).text.toSome
-
-    val img = select1(e >> "dd.cardImg" > "img").attr("src").trim
-
-    Basic(set, cardNo, name, rarity, img)
+  def extractBasic(e: Element): Option[Basic] = for {
+    cardNumber <- selectOne(e |>> "dd.cardNumber") //.text().trim
+    cardNo = cardNumber.text().trim
+    set = cardNo.split('-')(0)
+    name <- selectOne(e |>> "dd.charaName") //.text().trim
+    rarity <- (select(e |>> "dd.PreaP").headOption match {
+      case s@Some(_) => s
+      case None => selectOne(e |>> "dd.reaP")
+    }) //.text.toSome
+    img <- selectOne(e >> "dd.cardImg" > "img") //.attr("src").trim
+  } yield {
+    Basic(set, cardNo, name.text().trim, rarity.text.toSome, img.attr("src").trim)
   }
 
-  def extractAttribute(e: Element): Attribute = {
-    val hp = select1(e |>> "li.hpPoint").text().trim.toInt
-    val power = select1(e |>> "li.powerPoint").text().trim.toInt
-    val speed = select1(e |>> "li.spPoint").text().trim.toInt
+  def extractAttribute(e: Element): Option[Attribute] = for {
+    hp <- selectOne(e |>> "li.hpPoint") //.text().trim.toInt
+    power <- selectOne(e |>> "li.powerPoint") //.text().trim.toInt
+    speed <- selectOne(e |>> "li.spPoint") //.text().trim.toInt
+  } yield Attribute(hp.text().trim.toInt, power.text().trim.toInt, speed.text().trim.toInt)
 
-    Attribute(hp, power, speed)
-  }
 
-  def extractSkillAndText(e: Element): (String, String) = {
-    val skill = select1(e |>> "li.Skill").text.trim
-    val text = select1(e |>> "li.txt").text.trim
-    (skill, text)
-  }
+  def extractSkillAndText(e: Element): Option[(String, String)] = for {
+    skill <- selectOne(e |>> "li.Skill") //.text.trim
+    text <- selectOne(e |>> "li.txt") //.text.trim
+  } yield (skill.text.trim, text.text.trim)
 
-  def s1(e: Element)(evaluator: String): Element = select1(e |>> evaluator)
+  //def s1(e: Element)(evaluator: String): Element = select1(e |>> evaluator)
 
   def s1Opt(e: Element)(evaluator: String): Option[Element] =
     select(e |>> evaluator).headOption
