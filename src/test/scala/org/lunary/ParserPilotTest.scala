@@ -88,20 +88,24 @@ class ParserPilotTest extends FlatSpec {
   val pilot = Jsoup.parse(pilotHtml)
 
   "pilot" should "parse from pilot html" in {
-    val p = Parsers.extractPilot(pilot)
+    Parsers.extractPilot(pilot) match {
+      case Right(Some(p)) =>
+        val basic = p.basic
+        assertResult ("DW1-050") (basic.cardNo)
+        assertResult ("../images/cardlist/dammy/DW1-050.png") (basic.image)
+        assertResult ("ヒイロ・ユイ") (basic.name)
+        assertResult (Some ("M") ) (basic.rarity)
+        assertResult ("DW1") (basic.set)
 
-    val basic = p.basic
-    assertResult("DW1-050")(basic.cardNo)
-    assertResult("../images/cardlist/dammy/DW1-050.png")(basic.image)
-    assertResult("ヒイロ・ユイ")(basic.name)
-    assertResult(Some("M"))(basic.rarity)
-    assertResult("DW1")(basic.set)
+        assertResult (Attribute (2500, 1400, 1000) ) (p.attribute)
 
-    assertResult(Attribute(2500, 1400, 1000))(p.attribute)
+        assertResult (2) (p.burstLevel)
+        assertResult ("誰よりも戦い抜いてみせる!") (p.burstName)
 
-    assertResult(2)(p.burstLevel)
-    assertResult("誰よりも戦い抜いてみせる!")(p.burstName)
-
-    assertResult(Some(ExAwaken("ゼロシステム", "EX覚醒条件：対象機体搭乗")))(p.exAwaken)
+        assertResult (Some (ExAwaken ("ゼロシステム", "EX覚醒条件：対象機体搭乗") ) ) (p.exAwaken)
+      case Right(None) => throw new RuntimeException("cannot parse into Pilot")
+      case Left(e) => throw e
+    }
   }
+
 }

@@ -70,27 +70,34 @@ class ParserIgnitionTest extends FlatSpec {
 
   "ignition with no pilot skill" should "parse ignition1 html" in {
 
-    val ig = Parsers.extractIgnition(ignition1, false)
-    val basic = ig.basic
-    assertResult("DW1-075")(basic.cardNo)
-    assertResult("../images/cardlist/dammy/DW1-075.png")(basic.image)
-    assertResult("∀ガンダム")(basic.name)
-    assertResult(Some("C"))(basic.rarity)
-    assertResult("DW1")(basic.set)
+    Parsers.extractIgnition(ignition1, false) match {
+      case Right(Some(ig)) =>
+        val basic = ig.basic
+        assertResult("DW1-075")(basic.cardNo)
+        assertResult("../images/cardlist/dammy/DW1-075.png")(basic.image)
+        assertResult("∀ガンダム")(basic.name)
+        assertResult(Some("C"))(basic.rarity)
+        assertResult("DW1")(basic.set)
 
 
-    assertResult(1200)(ig.special)
-    assertResult("ロラン・セアック,ソシエ・ハイム")(ig.pilotName)
-    assertResult("相手から先攻を奪って必殺技で攻撃する。更に相手の攻撃を封印する。発動条件：【1ラウンド】【1回限り】")(ig.effectText)
-    assertResult(None)(ig.pilotSkillText)
+        assertResult(1200)(ig.special)
+        assertResult("ロラン・セアック,ソシエ・ハイム")(ig.pilotName)
+        assertResult("相手から先攻を奪って必殺技で攻撃する。更に相手の攻撃を封印する。発動条件：【1ラウンド】【1回限り】")(ig.effectText)
+        assertResult(None)(ig.pilotSkillText)
+      case Right(None) => throw new RuntimeException("cannot parse Ignition")
+      case Left(e) => throw e
+    }
+
 
   }
 
   "ignition with pilot skill" should "parse ignition2 html" in {
-
-    val ig = Parsers.extractIgnition(ignition2, true)
-    assertResult(Some("攻撃時、ずっと相手の必殺技を30%減少させる。【1回限り】"))(ig.pilotSkillText)
-
+    Parsers.extractIgnition(ignition2, true) match {
+      case Right(Some(ig)) =>
+        assertResult(Some("攻撃時、ずっと相手の必殺技を30%減少させる。【1回限り】"))(ig.pilotSkillText)
+      case Right(None) => throw new RuntimeException("cannot parse Ignition")
+      case Left(e) => throw e
+    }
   }
 
 }

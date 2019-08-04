@@ -374,54 +374,67 @@ class ParsersMobileSuitTest extends FlatSpec {
 
   "basic mobile suite information" should "be parsed from MS html" in {
 
-    val ms = Parsers.extractMobileSuit(basicMs)
+    Parsers.extractMobileSuit(basicMs) match {
+      case Right(Some(ms)) =>
+        val basic = ms.basic
+        assertResult("DW1-001")(basic.cardNo)
+        assertResult("../images/cardlist/dammy/DW1-001.png")(basic.image)
+        assertResult("ザクⅡ（量産型）")(basic.name)
+        assertResult(Some("R"))(basic.rarity)
+        assertResult("DW1")(basic.set)
 
-    val basic = ms.basic
-    assertResult("DW1-001")(basic.cardNo)
-    assertResult("../images/cardlist/dammy/DW1-001.png")(basic.image)
-    assertResult("ザクⅡ（量産型）")(basic.name)
-    assertResult(Some("R"))(basic.rarity)
-    assertResult("DW1")(basic.set)
 
+        assertResult(None)(ms.aceEffect)
 
-    assertResult(None)(ms.aceEffect)
+        assertResult(2400)(ms.attribute.hp)
+        assertResult(4)(ms.cost)
+        assertResult(Some("ジオニック社"))(ms.mecName)
+        assertResult(Some("-"))(ms.pilotName)
+        assertResult("○")(ms.powerRank.space)
+        assertResult("○")(ms.powerRank.ground)
+        assertResult(Some("×"))(ms.powerRank.desert)
+        assertResult(Some("○"))(ms.powerRank.forest)
+        assertResult(Some("×"))(ms.powerRank.water)
 
-    assertResult(2400)(ms.attribute.hp)
-    assertResult(4)(ms.cost)
-    assertResult(Some("ジオニック社"))(ms.mecName)
-    assertResult(Some("-"))(ms.pilotName)
-    assertResult("○")(ms.powerRank.space)
-    assertResult("○")(ms.powerRank.ground)
-    assertResult(Some("×"))(ms.powerRank.desert)
-    assertResult(Some("○"))(ms.powerRank.forest)
-    assertResult(Some("×"))(ms.powerRank.water)
-
-    assertResult(4500)(ms.special)
-    assertResult(NonEmptyList("逆境", Nil))(ms.abilities)
-    assertResult("【HPが相手以下】相手の残りHP量に応じてダメージがアップする。")(ms.text)
-    assertResult(None)(ms.transformed)
-
+        assertResult(4500)(ms.special)
+        assertResult(NonEmptyList("逆境", Nil))(ms.abilities)
+        assertResult("【HPが相手以下】相手の残りHP量に応じてダメージがアップする。")(ms.text)
+        assertResult(None)(ms.transformed)
+      case Right(None) => throw new RuntimeException("cannot parse MobileSuite")
+      case Left(e) => throw e
+    }
   }
 
   "anniversary mobile suite information" should "be parsed from MS html" in {
 
-    val ms = Parsers.extractMobileSuit(anniMs)
-    assertResult(Some("ANNIV."))(ms.basic.rarity)
-    assertResult(NonEmptyList("共撃", List("トランザム")))(ms.abilities)
-    assertResult("【一定確率】1対1のとき、味方がアシストとしてバトルに参加する。【一定確率】カードをこすってトランザム! 相手の攻撃を回避した後、反撃する。")(ms.text)
+    Parsers.extractMobileSuit(anniMs) match {
+      case Right(Some(ms)) =>
+        assertResult(Some("ANNIV."))(ms.basic.rarity)
+        assertResult(NonEmptyList("共撃", List("トランザム")))(ms.abilities)
+        assertResult("【一定確率】1対1のとき、味方がアシストとしてバトルに参加する。【一定確率】カードをこすってトランザム! 相手の攻撃を回避した後、反撃する。")(ms.text)
+      case Right(None) => throw new RuntimeException("cannot parse MobileSuite")
+      case Left(e) => throw e
+    }
   }
 
   "dual mobile suite information" should "be parsed from MS html" in {
 
-    val ms = Parsers.extractMobileSuit(dualMs)
-    assertResult(None)(ms.aceEffect)
-    println(ms)
+    Parsers.extractMobileSuit(dualMs) match {
+      case Right(Some(ms)) =>
+        assertResult(None)(ms.aceEffect)
+        println(ms)
+      case Right(None) => throw new RuntimeException("cannot parse MobileSuite")
+      case Left(e) => throw e
+    }
   }
 
   "ace mobile suite information" should "be parsed from MS html" in {
-
-    val ms = Parsers.extractMobileSuit(aceMs)
-    assertResult(Some("ラウンド2からずっと受けるダメージ-500。"))(ms.aceEffect)
-    println(ms)
+    Parsers.extractMobileSuit(aceMs) match {
+      case Right(Some(ms)) =>
+        assertResult(Some("ラウンド2からずっと受けるダメージ-500。"))(ms.aceEffect)
+        println(ms)
+      case Right(None) => throw new RuntimeException("cannot parse MobileSuite")
+      case Left(e) => throw e
+    }
   }
 }

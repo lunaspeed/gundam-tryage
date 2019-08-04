@@ -26,7 +26,7 @@ object Parsers {
 
       val divs = select(list > "div")
 
-      val cards: Stream[ParseResult] = divs map { d =>
+      val cards: Stream[Either[Throwable, Option[Card]]] = divs map { d =>
 
         (select(d > "div.carddateCol").headOption match {
           case Some(cardType) =>
@@ -53,17 +53,18 @@ object Parsers {
               case None =>
                 extractUnknownType(d, "")
             }
-        }).left.map(t => ParseException(d.html, t)).asInstanceOf[ParseResult]
+        }).left.map(t => ParseException(d.html, t)).asInstanceOf[Either[Throwable, Option[Card]]]
 
       }
 
       val cardResult: ParseResult = cards.foldLeft[ParseResult](Right(Nil)) { (r, c) =>
         (r, c) match {
-          case (Right(cards), Right(card)) => Right[Throwable, List[Option[Card]]](cards ++ card)
+          case (Right(cards), Right(card)) => Right[Throwable, List[Option[Card]]](cards :+ card)
           case (l@Left(_), _) => l
           case (_, l@Left(_)) => l.asInstanceOf[ParseResult]
         }
       }
+
       cardResult
     }
     result.fold[ParseResult](Left(new RuntimeException("no div#list found")))(identity)
@@ -158,9 +159,9 @@ object Parsers {
       pilotName <- s("dd.PlName") //.text.trim
       effectElement <- selectOne(e |>> "ul.ignEffect")
       (effectSkill, effectText) <- extractSkillAndText(effectElement)
-      skillElement <- selectOne(e |>> "ul.ignPlSkill")
-      (pilotSkill, pilotSkillText) = if (hasPilotSkill) {
-        extractSkillAndText(skillElement).fold[(Option[String], Option[String])]((None, None)){ case (ps, pt) => (Some(ps), Some(pt)) }
+      skillElement = selectOne(e |>> "ul.ignPlSkill")
+      (pilotSkill, pilotSkillText) = if (hasPilotSkill && skillElement.isDefined) {
+        extractSkillAndText(skillElement.get).fold[(Option[String], Option[String])]((None, None)){ case (ps, pt) => (Some(ps), Some(pt)) }
       }
       else {
         (None, None)
