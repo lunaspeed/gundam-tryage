@@ -38,6 +38,9 @@ object Models {
 
 
   val dwSets = ListMap(
+    "168024" -> "DELTA WARS 4弾",
+    "168023" -> "DELTA WARS 3弾",
+    "168022" -> "DELTA WARS 2弾",
     "168021" -> "DELTA WARS 1弾"
   )
 
@@ -55,6 +58,7 @@ object Models {
     "168603" -> "VS IGNITION 3弾",
     "168602" -> "VS IGNITION 2弾",
     "168601" -> "VS IGNITION 1弾")
+
   val tkrSets = ListMap(
     "168505" -> "鉄華繚乱5弾",
     "168504" -> "鉄華繚乱4弾",

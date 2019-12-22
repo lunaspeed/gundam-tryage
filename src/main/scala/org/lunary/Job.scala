@@ -64,7 +64,7 @@ object Job {
 
   def createHttpClient(): CloseableHttpClient = {
     val store = new BasicCookieStore
-    HttpClientBuilder.create().setDefaultCookieStore(store).build()
+    HttpClientBuilder.create().setMaxConnTotal(4).setDefaultCookieStore(store).build()
   }
 
 }
