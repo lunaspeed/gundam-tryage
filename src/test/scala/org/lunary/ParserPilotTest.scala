@@ -89,7 +89,7 @@ class ParserPilotTest extends FlatSpec {
 
   "pilot" should "parse from pilot html" in {
     Parsers.extractPilot(pilot) match {
-      case Right(Some(p)) =>
+      case Right(p) =>
         val basic = p.basic
         assertResult ("DW1-050") (basic.cardNo)
         assertResult ("../images/cardlist/dammy/DW1-050.png") (basic.image)
@@ -103,7 +103,6 @@ class ParserPilotTest extends FlatSpec {
         assertResult ("誰よりも戦い抜いてみせる!") (p.burstName)
 
         assertResult (Some (ExAwaken ("ゼロシステム", "EX覚醒条件：対象機体搭乗") ) ) (p.exAwaken)
-      case Right(None) => throw new RuntimeException("cannot parse into Pilot")
       case Left(e) => throw e
     }
   }

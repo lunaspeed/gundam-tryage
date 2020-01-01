@@ -27,30 +27,22 @@ class Excel(config: Config, areaConfig: AreaConfig) {
 
     val job = new Job(areaConfig)
 
-    val cardsResult: List[Either[Throwable, List[Option[Card]]]] = sets.toList.reverse.map {
+    val cardsResult: List[Either[Throwable, List[Card]]] = sets.toList.reverse.map {
       case (category, _) => job.request(category, client) flatMap Parsers.parse
     }
 
     //如何變成Either[Throwable, List[Card]]?
-    val cards: Either[Throwable, List[Option[Card]]] = cardsResult.foldRight[Either[Throwable, List[Option[Card]]]](Right(Nil)) { (result, either) =>
+    val cards: Either[Throwable, List[Card]] = cardsResult.foldRight[Either[Throwable, List[Card]]](Right(Nil)) { (result, either) =>
       (result, either) match {
         case (Right(aggregated), Right(cards)) => Right(aggregated ++ cards)
-        case (r: Left[Throwable, List[Option[Card]]], _) => r
-        case (_, c: Left[Throwable, List[Option[Card]]]) => c
+        case (r: Left[Throwable, List[Card]], _) => r
+        case (_, c: Left[Throwable, List[Card]]) => c
       }
-    }
-
-    //log cards missing by index
-    for {
-      list <- cards
-      card <- list.zipWithIndex if card._1.isEmpty
-    } {
-        println(s"cards at index ${card._2} is missing or unable to be parsed")
     }
 
     //分成4種不同的LIST分開處理
     val separated: Either[Throwable, (List[MobileSuit], List[Pilot], List[Ignition], List[UnknownType])] = cards map {
-      _.flatten.foldLeft[(List[MobileSuit], List[Pilot], List[Ignition], List[UnknownType])]((Nil, Nil, Nil, Nil)) { (lists, card) =>
+      _.foldLeft[(List[MobileSuit], List[Pilot], List[Ignition], List[UnknownType])]((Nil, Nil, Nil, Nil)) { (lists, card) =>
         card match {
           case ms: MobileSuit => lists.copy(_1 = lists._1 :+ ms)
           case p: Pilot => lists.copy(_2 = lists._2 :+ p)

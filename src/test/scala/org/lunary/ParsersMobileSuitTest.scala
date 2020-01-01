@@ -6,7 +6,6 @@ import org.scalatest.FlatSpec
 
 class ParsersMobileSuitTest extends FlatSpec {
 
-
   val basicMsHtml =
     """<div>
     |  <div class="carddateCol mscardCol">
@@ -203,7 +202,7 @@ class ParsersMobileSuitTest extends FlatSpec {
       |            <dt><img src="../images/cardlist/dw/ms/tit_pl.png" width="85" height="20" alt="パイロット"></dt>
       |            <dd>シロー・アマダ,カレン・ジョシュワ,テリー・サンダースJr.</dd>
       |          </dl>
-      |                                </div>
+      |        </div>
       |        <div class="info3Col MsAbiCol">
       |          <dl>
       |            <dt>
@@ -270,7 +269,7 @@ class ParsersMobileSuitTest extends FlatSpec {
       |          </li>
       |          </ul>
       |        </div>
-      |                            </div>
+      |      </div>
       |      <div class="col_l">
       |        <div class="cardCol">
       |          <img src="../images/cardlist/dammy/DW1-002.png" width="161" height="235" alt="陸戦型ガンダム">
@@ -375,7 +374,7 @@ class ParsersMobileSuitTest extends FlatSpec {
   "basic mobile suite information" should "be parsed from MS html" in {
 
     Parsers.extractMobileSuit(basicMs) match {
-      case Right(Some(ms)) =>
+      case Right(ms) =>
         val basic = ms.basic
         assertResult("DW1-001")(basic.cardNo)
         assertResult("../images/cardlist/dammy/DW1-001.png")(basic.image)
@@ -400,7 +399,6 @@ class ParsersMobileSuitTest extends FlatSpec {
         assertResult(NonEmptyList("逆境", Nil))(ms.abilities)
         assertResult("【HPが相手以下】相手の残りHP量に応じてダメージがアップする。")(ms.text)
         assertResult(None)(ms.transformed)
-      case Right(None) => throw new RuntimeException("cannot parse MobileSuite")
       case Left(e) => throw e
     }
   }
@@ -408,11 +406,10 @@ class ParsersMobileSuitTest extends FlatSpec {
   "anniversary mobile suite information" should "be parsed from MS html" in {
 
     Parsers.extractMobileSuit(anniMs) match {
-      case Right(Some(ms)) =>
+      case Right(ms) =>
         assertResult(Some("ANNIV."))(ms.basic.rarity)
         assertResult(NonEmptyList("共撃", List("トランザム")))(ms.abilities)
         assertResult("【一定確率】1対1のとき、味方がアシストとしてバトルに参加する。【一定確率】カードをこすってトランザム! 相手の攻撃を回避した後、反撃する。")(ms.text)
-      case Right(None) => throw new RuntimeException("cannot parse MobileSuite")
       case Left(e) => throw e
     }
   }
@@ -420,20 +417,25 @@ class ParsersMobileSuitTest extends FlatSpec {
   "dual mobile suite information" should "be parsed from MS html" in {
 
     Parsers.extractMobileSuit(dualMs) match {
-      case Right(Some(ms)) =>
+      case Right(ms) =>
         assertResult(None)(ms.aceEffect)
+        assertResult("陸戦型ガンダム")(ms.basic.name)
+        assertResult(true)(ms.transformed.isDefined)
+        val t = ms.transformed.get
+
+        assertResult("ガンダムEz8")(t.basic.name)
+        assertResult(None)(t.transformed)
+        assertResult("../images/cardlist/dammy/DW1-002.png")(t.basic.image)
         println(ms)
-      case Right(None) => throw new RuntimeException("cannot parse MobileSuite")
       case Left(e) => throw e
     }
   }
 
   "ace mobile suite information" should "be parsed from MS html" in {
     Parsers.extractMobileSuit(aceMs) match {
-      case Right(Some(ms)) =>
+      case Right(ms) =>
         assertResult(Some("ラウンド2からずっと受けるダメージ-500。"))(ms.aceEffect)
         println(ms)
-      case Right(None) => throw new RuntimeException("cannot parse MobileSuite")
       case Left(e) => throw e
     }
   }
