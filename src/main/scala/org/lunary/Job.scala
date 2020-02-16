@@ -42,7 +42,7 @@ class Job(config: AreaConfig) {
     post.addHeader("Origin", config.urlBase)
     post.addHeader("Referer", searchUrl)
     post.addHeader("Upgrade-Insecure-Requests", "1")
-    post.addHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.79 Safari/537.36")
+    post.addHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36")
 
     val result = Try {
       val start = System.currentTimeMillis()
