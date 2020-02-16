@@ -38,6 +38,7 @@ object Models {
 
 
   val dwSets = ListMap(
+    "168025" -> "DELTA WARS 5弾",
     "168024" -> "DELTA WARS 4弾",
     "168023" -> "DELTA WARS 3弾",
     "168022" -> "DELTA WARS 2弾",
@@ -180,8 +181,8 @@ object Models {
   case object Japan extends Area {
 
     override val configName = "japan"
-    override val combinedSets = dwSets ++ oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
-    override val setGroups = "dw" -> dwSets :: "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
+    override val combinedSets = dwSets //++ oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
+    override val setGroups = "dw" -> dwSets :: Nil//"oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
 
     override val sheetNameMobileSuit = "モビルスーツ"
     override val sheetNamePilot = "パイロット"
