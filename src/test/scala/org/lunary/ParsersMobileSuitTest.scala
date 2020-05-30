@@ -2,9 +2,9 @@ package org.lunary
 
 import cats.data.NonEmptyList
 import org.jsoup.Jsoup
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpecLike
 
-class ParsersMobileSuitTest extends FlatSpec {
+class ParsersMobileSuitTest extends AnyFlatSpecLike {
 
   val basicMsHtml =
     """<div>
@@ -435,6 +435,95 @@ class ParsersMobileSuitTest extends FlatSpec {
     Parsers.extractMobileSuit(aceMs) match {
       case Right(ms) =>
         assertResult(Some("ラウンド2からずっと受けるダメージ-500。"))(ms.aceEffect)
+        println(ms)
+      case Left(e) => throw e
+    }
+  }
+
+  val newMsHtml =
+    """
+      |<div class="carddateCol mscardCol">
+      |                  <div class="dateCol">
+      |                    <div class="col_r">
+      |                      <div class="info1col">
+      |                        <dl class="date1col">
+      |                          <dt>カードリスト</dt>
+      |                          <dd class="cardNumber">EB1-038</dd>
+      |                          <dd class="charaName">モビルドールメイ</dd>
+      |                          <dd class="wazaName">モビルアーツ・メイルストロム</dd>
+      |                          <dd class="statusCol">
+      |                            <ul class="status statusdateCol">
+      |                              <li class="hpPoint">3100</li>
+      |                              <li class="powerPoint">2900</li>
+      |                              <li class="spPoint">4800</li>
+      |                            </ul>
+      |                          </dd>
+      |                          <dd>
+      |                            <ul class="atack">
+      |                              <li class="spPower">8300</li>
+      |                              <li class="Cost">8</li>
+      |                            </ul>
+      |                          </dd>
+      |                          <dd class="placeCol">
+      |                            <ul class="place">
+      |                              <li class="pSpace">○</li>
+      |                              <li class="pGrand">◎</li>
+      |                              <li class="p3">▲</li>
+      |                              <li class="p4">○</li>
+      |                              <li class="p5">×</li>
+      |                            </ul>
+      |                          </dd>
+      |                          <dd class="MecName">ビルドダイバーズ</dd>
+      |                        </dl>
+      |                      </div>
+      |                      <div class="info2Col">
+      |                        <dl>
+      |                          <dt><img src="../images/cardlist/eb/ms/tit_pl.png" width="85" height="20" alt="パイロット"></dt>
+      |                          <dd>メイ</dd>
+      |                        </dl>
+      |                                                <dl>
+      |                          <dt><img src="../images/cardlist/eb/common/tit_ace.png" width="85" height="20" alt="エース効果"></dt>
+      |                          <dd>ラウンド2からずっと仲間全員のスピード、必殺技+1500。</dd>
+      |                        </dl>
+      |                                              </div>
+      |                      <div class="info3Col MsAbiCol">
+      |                        <dl>
+      |                          <dt>
+      |                            <p>激戦</p>
+      |                          </dt>
+      |                          <dd>
+      |                            <p>攻撃するたびにクリティカルダメージとクリティカル発生率がアップする。更に相手の復活系と防御系アビリティを封じる。                              </p>
+      |                          </dd>
+      |                        </dl>
+      |                        <ul class="MsAbi abiIcon">
+      |                        <li class="icon">                        <span class="gekisen"></span>
+      |                        </li>
+      |                        </ul>
+      |                      </div>
+      |                                          </div>
+      |                    <div class="col_l">
+      |                      <div class="cardCol">
+      |                        <img src="../images/cardlist/dammy/EB1-038.png" width="161" height="235" alt="モビルドールメイ">
+      |                      </div>
+      |                      <div class="reaCol">
+      |                        <dl>
+      |                          <dt><img src="../images/cardlist/eb/ms/tit_rea.png" width="160" height="28" alt="レアリティ"></dt>
+      |                          <dd>P</dd>
+      |                        </dl>
+      |                      </div>
+      |                                                                  <div class="logoCol">
+      |                      <img src="../images/cardlist/tekketsu/parts/logo/logo_bdre.png">
+      |                      </div>
+      |                                          </div>
+      |                  </div>
+      |                                                    </div>
+      |""".stripMargin
+  final val newMs = Jsoup.parse(newMsHtml)
+
+  "new mobile suite information" should "be parsed from MS html" in {
+    Parsers.extractMobileSuit(newMs) match {
+      case Right(ms) =>
+        assertResult(Some("ラウンド2からずっと仲間全員のスピード、必殺技+1500。"))(ms.aceEffect)
         println(ms)
       case Left(e) => throw e
     }

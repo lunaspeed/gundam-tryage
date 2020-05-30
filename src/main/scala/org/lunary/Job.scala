@@ -1,12 +1,15 @@
 package org.lunary
 
+import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 
 import org.apache.commons.io.IOUtils
-import org.apache.http.client.entity.UrlEncodedFormEntity
-import org.apache.http.client.methods.{CloseableHttpResponse, HttpPost}
-import org.apache.http.impl.client.{BasicCookieStore, CloseableHttpClient, HttpClientBuilder}
-import org.apache.http.message.BasicNameValuePair
+import org.apache.hc.client5.http.classic.methods.HttpPost
+import org.apache.hc.client5.http.cookie.BasicCookieStore
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity
+import org.apache.hc.client5.http.impl.classic.{CloseableHttpClient, CloseableHttpResponse, HttpClientBuilder}
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder
+import org.apache.hc.core5.http.message.BasicNameValuePair
 import org.lunary.Models.AreaConfig
 
 import collection.JavaConverters._
@@ -26,11 +29,11 @@ class Job(config: AreaConfig) {
       //free=&rarelity=&battle_type=&card_type=&category_exp=168011&title_name=&btn_search.x=96&btn_search.y=44&btn_search=%E6%A4%9C%E7%B4%A2
       val params = List("free" -> "", "rarelity" -> "", "battle_type" -> "", "card_type" -> "",
         "category_exp" -> category, "title_name" -> "",
-        "btn_search.x"-> s"${rand.nextInt(96) + 2}", "btn_search.y" -> s"${rand.nextInt(45) + 2}",
+        "btn_search.x" -> s"${rand.nextInt(96) + 2}", "btn_search.y" -> s"${rand.nextInt(45) + 2}",
         "btn_searc" -> "検索").map {
         case (key, value) => new BasicNameValuePair(key, value)
       }
-      new UrlEncodedFormEntity(params.asJava, "UTF-8")
+      new UrlEncodedFormEntity(params.asJava, StandardCharsets.UTF_8)
     }
 
     post.setEntity(form)
@@ -51,7 +54,7 @@ class Job(config: AreaConfig) {
       IOUtils.toString(resp.getEntity.getContent, "UTF-8")
     }
 
-    if(resp != null) {
+    if (resp != null) {
       resp.close()
     }
 
@@ -64,7 +67,8 @@ object Job {
 
   def createHttpClient(): CloseableHttpClient = {
     val store = new BasicCookieStore
-    HttpClientBuilder.create().setMaxConnTotal(4).setDefaultCookieStore(store).build()
+    val connManager = PoolingHttpClientConnectionManagerBuilder.create().setMaxConnTotal(4).build()
+    HttpClientBuilder.create().setConnectionManager(connManager).setDefaultCookieStore(store).build()
   }
 
 }

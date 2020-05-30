@@ -7,6 +7,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.select.Evaluator
 import org.lunary.Models._
+import org.lunary.Parsers.extractBasic
 
 import collection.JavaConverters._
 import scala.util.Try
@@ -38,6 +39,8 @@ object Parsers {
               extractMobileSuit(d)
           case Some(cardType) if cardType.hasClass("plcardCol") =>
               extractPilot(d)
+          case Some(cardType) if cardType.hasClass("boostCol") =>
+              extractBoost(d)
           case Some(_) =>
               extractUnknownType(d, "carddateCol")
           case None =>
@@ -175,6 +178,42 @@ object Parsers {
       Ignition(basic,
         wazaName.text.trim, special.text.trim.toInt, pilotName.text.trim,
         effectSkill, effectText, pilotSkill, pilotSkillText)
+    }
+  }.toEither.flatMap(identity)
+
+  def extractBoost(e: Element): Either[Throwable, Boost] = Try {
+
+    def findLevelInfo(div: Element, lvl: Int): SelectResult[(String, String)] =
+      for {
+        dt <- div.findOne(s"dt.lv0$lvl")
+        dl = dt.parent()
+        dd <- dl.findOne("dd")
+      } yield {
+        (dt.text.trim, dd.text.trim)
+      }
+
+    for {
+      basic <- extractBasicNew(e)
+      boostEffectCol <- selectOne(e |>> ".boostEffectCol").asMustResult(".boostEffectCol")
+      bEffectImg <- boostEffectCol.findOne("img[alt='ブースト効果']")
+      bEffectDl = bEffectImg.parent().parent()
+      effect <- bEffectDl.findOne("dd")
+      bEffectImg <- boostEffectCol.findOne("img[alt='ポイント獲得条件']")
+      bRequirementDl = bEffectImg.parent().parent()
+      requirement <- bRequirementDl.findOne("dd")
+      levelDiv <- e.findOne("div.boostLevelCol")
+      lvl1 <- findLevelInfo(levelDiv, 1)
+      (lvl1Req, lvl1Eff) = lvl1
+      lvl2 <- findLevelInfo(levelDiv, 2)
+      (lvl2Req, lvl2Eff) = lvl2
+      lvl3 <- findLevelInfo(levelDiv, 3)
+      (lvl3Req, lvl3Eff) = lvl3
+    } yield {
+      Boost(basic, effect.text.trim, requirement.text.trim,
+        lvl1Req, lvl1Eff,
+        lvl2Req, lvl2Eff,
+        lvl3Req, lvl3Eff
+      )
     }
   }.toEither.flatMap(identity)
 

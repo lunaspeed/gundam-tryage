@@ -8,7 +8,7 @@ gundam {
 }
 
 //absolute path to folder storing the generated files
-fileDirectory = "/Users/Lunaspeed/Documents/gundam"
+fileDirectory = "/Users/xxx/Documents/gundam"
 //Delete original Excel if exists, recommended
 deleteExistingFile = true
 generateTransformed = false

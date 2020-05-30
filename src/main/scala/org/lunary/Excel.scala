@@ -3,7 +3,7 @@ package org.lunary
 import java.io.{File, FileOutputStream}
 
 import com.typesafe.config.Config
-import org.apache.http.impl.client.CloseableHttpClient
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
 import org.apache.poi.common.usermodel.HyperlinkType
 import org.apache.poi.ss.usermodel.CreationHelper
 import org.apache.poi.ss.util.CellRangeAddress
@@ -41,25 +41,27 @@ class Excel(config: Config, areaConfig: AreaConfig) {
     }
 
     //分成4種不同的LIST分開處理
-    val separated: Either[Throwable, (List[MobileSuit], List[Pilot], List[Ignition], List[UnknownType])] = cards map {
-      _.foldLeft[(List[MobileSuit], List[Pilot], List[Ignition], List[UnknownType])]((Nil, Nil, Nil, Nil)) { (lists, card) =>
+    val separated: Either[Throwable, (List[MobileSuit], List[Pilot], List[Ignition], List[Boost], List[UnknownType])] = cards map {
+      _.foldLeft[(List[MobileSuit], List[Pilot], List[Ignition], List[Boost], List[UnknownType])]((Nil, Nil, Nil, Nil, Nil)) { (lists, card) =>
         card match {
           case ms: MobileSuit => lists.copy(_1 = lists._1 :+ ms)
           case p: Pilot => lists.copy(_2 = lists._2 :+ p)
           case i: Ignition => lists.copy(_3 = lists._3 :+ i)
-          case u: UnknownType => lists.copy(_4 = lists._4 :+ u)
+          case b: Boost => lists.copy(_4 = lists._4 :+ b)
+          case u: UnknownType => lists.copy(_5 = lists._5 :+ u)
         }
       }
     }
 
     //產生Excel
     val excel: Either[Throwable, XSSFWorkbook] = separated.map {
-      case (mobileSuits, pilots, ignitions, unknowns) =>
+      case (mobileSuits, pilots, ignitions, boosts, unknowns) =>
         val book = new XSSFWorkbook()
         val generateTransformed = config.getBoolean("generateTransformed")
         writeMS(book, area.sheetNameMobileSuit, mobileSuits, generateTransformed)
         writePilot(book, area.sheetNamePilot, pilots)
         writeIgnition(book, area.sheetNameIgnition, ignitions)
+        writeBoost(book, area.sheetNameBoost, boosts)
         writeUnknown(book, "Unknown", unknowns)
         book
     }
@@ -185,7 +187,7 @@ class Excel(config: Config, areaConfig: AreaConfig) {
     }
 
   def writeIgnition(wb: XSSFWorkbook, sheetName: String, cards: Seq[Ignition]): Unit =
-    if (!cards.isEmpty) {
+    if (cards.nonEmpty) {
 
       val sheet = wb.createSheet(sheetName)
       val titleRow = sheet.createRow(0)
@@ -208,6 +210,33 @@ class Excel(config: Config, areaConfig: AreaConfig) {
 
           ig.pilotSkill.foreach(row.createCell(start + 6).setCellValue(_))
           ig.pilotSkillText.foreach(row.createCell(start + 7).setCellValue(_))
+      }
+    }
+
+  def writeBoost(wb: XSSFWorkbook, sheetName: String, cards: Seq[Boost]): Unit =
+    if (cards.nonEmpty) {
+
+      val sheet = wb.createSheet(sheetName)
+      val titleRow = sheet.createRow(0)
+      (titleBegin ++ area.boostTitles).zipWithIndex foreach {
+        case (s, i) =>
+          titleRow.createCell(startingCell - 1 + i).setCellValue(s)
+      }
+
+      cards.sortBy(_.basic.cardNo).zipWithIndex.foreach {
+        case (b, i) =>
+          val row = sheet.createRow(i + 1)
+
+          val start = writeBasic(row, startingCell, b.basic, wb.getCreationHelper)
+          row.createCell(start + 1).setCellValue(b.effect)
+          row.createCell(start + 2).setCellValue(b.requirement)
+          row.createCell(start + 3).setCellValue(b.lvl1Requirement)
+          row.createCell(start + 4).setCellValue(b.lvl1Effect)
+          row.createCell(start + 5).setCellValue(b.lvl2Requirement)
+          row.createCell(start + 6).setCellValue(b.lvl2Effect)
+          row.createCell(start + 7).setCellValue(b.lvl3Requirement)
+          row.createCell(start + 8).setCellValue(b.lvl3Effect)
+
       }
     }
 

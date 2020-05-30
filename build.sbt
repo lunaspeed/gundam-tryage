@@ -7,15 +7,15 @@ version := "1.0"
 //)
 
 
-scalaVersion := "2.12.7"
+scalaVersion := "2.12.10"
 
 libraryDependencies ++= List(
-  "org.apache.httpcomponents" % "httpclient" % "4.5.6",
-  "org.apache.poi" % "poi" % "4.0.0",
-  "org.apache.poi" % "poi-ooxml" % "4.0.0",
+  "org.apache.httpcomponents.client5" % "httpclient5" % "5.0",
+  "org.apache.poi" % "poi" % "4.1.2",
+  "org.apache.poi" % "poi-ooxml" % "4.1.2",
   "info.henix" %% "ssoup" % "0.5",
-  "commons-io" % "commons-io" % "2.6",
-  "com.typesafe" % "config" % "1.3.3",
+  "commons-io" % "commons-io" % "2.7",
+  "com.typesafe" % "config" % "1.4.0",
   "org.typelevel" %% "cats-core" % "1.0.1",
   "org.scalatest" %% "scalatest" % "3.0.5" % Test)
 

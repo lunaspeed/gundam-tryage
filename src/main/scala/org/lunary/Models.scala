@@ -34,10 +34,19 @@ object Models {
                       wazaName: String, special: Int, pilotName: String,
                       effectSkill: String, effectText: String, pilotSkill: Option[String], pilotSkillText: Option[String]) extends Card
 
+  case class Boost(basic: Basic,
+                   effect: String, requirement: String,
+                   lvl1Requirement: String, lvl1Effect: String,
+                   lvl2Requirement: String, lvl2Effect: String,
+                   lvl3Requirement: String, lvl3Effect: String) extends Card
   case class UnknownType(basic: Basic, typeClasses: Set[String]) extends Card
 
+  val ebSets = ListMap(
+    "168031" -> "EVOL BOOST!! 1弾"
+  )
 
   val dwSets = ListMap(
+    "168026" -> "DELTA WARS 6弾",
     "168025" -> "DELTA WARS 5弾",
     "168024" -> "DELTA WARS 4弾",
     "168023" -> "DELTA WARS 3弾",
@@ -114,6 +123,8 @@ object Models {
 
   val promoSets = ListMap(
     "168701" -> "鉄血のオルフェンズ ブースターパック",
+    "168908" -> "EVOL BOOST プロモーションカード",
+    "168907" -> "DELTA WARS プロモーションカード",
     "168906" -> "OPERATION ACE プロモーションカード",
     "168905" -> "VS IGNITION プロモーションカード",
     "168904" -> "鉄血弾 プロモーションカード",
@@ -167,11 +178,13 @@ object Models {
     val sheetNameMobileSuit: String
     val sheetNamePilot: String
     val sheetNameIgnition: String
+    val sheetNameBoost: String
 
     val baseTitles: List[String]
     val mobileSuitTitles: List[String]
     val pilotTitles: List[String]
     val ignitionTitles: List[String]
+    val boostTitles: List[String]
 
     val burstAttack: String
     val burstDefence: String
@@ -181,12 +194,13 @@ object Models {
   case object Japan extends Area {
 
     override val configName = "japan"
-    override val combinedSets = dwSets //++ oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
-    override val setGroups = "dw" -> dwSets :: Nil//"oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
+    override val combinedSets = ebSets //++ dwSets ++ oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
+    override val setGroups = "eb" -> ebSets :: Nil//"dw" -> dwSets :: "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
 
     override val sheetNameMobileSuit = "モビルスーツ"
     override val sheetNamePilot = "パイロット"
     override val sheetNameIgnition = "イグニッション"
+    override val sheetNameBoost = "ブースト"
 
     override val baseTitles: List[String] = List("所有する", "弾", "カード番号", "レアリティ", "カード名", "画像")
 
@@ -202,6 +216,9 @@ object Models {
     override val ignitionTitles: List[String] = List("パイロット名",
       "必殺技", "必殺威力",
       "効果名", "効果", "パイロットスキル名", "パイロットスキル")
+
+    override val boostTitles: List[String] = List("ブースト効果", "ポイント獲得条件",
+    "Lv1条件", "Lv1効果","Lv2条件", "Lv2効果","Lv3条件", "Lv3効果")
 
     override val burstAttack: String = "アタック"
     override val burstDefence: String = "ディフェンス"

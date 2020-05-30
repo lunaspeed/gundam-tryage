@@ -1,9 +1,9 @@
 package org.lunary
 
 import org.jsoup.Jsoup
-import org.scalatest.FlatSpec
+import org.scalatest.flatspec.AnyFlatSpecLike
 
-class ParserIgnitionTest extends FlatSpec {
+class ParserIgnitionTest extends AnyFlatSpecLike {
 
   val ignition1Html = """ <div>
                         |<div class="frame BgIgnlist"><!--イグニッションカード-->
