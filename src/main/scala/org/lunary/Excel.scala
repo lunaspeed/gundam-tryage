@@ -1,17 +1,18 @@
 package org.lunary
 
-import java.io.{File, FileOutputStream}
+import java.io.{BufferedOutputStream, File, FileOutputStream, OutputStream}
 
+import cats.effect.{IO, Resource}
 import com.typesafe.config.Config
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
 import org.apache.poi.common.usermodel.HyperlinkType
 import org.apache.poi.ss.usermodel.CreationHelper
 import org.apache.poi.ss.util.CellRangeAddress
 import org.apache.poi.xssf.usermodel.{XSSFRow, XSSFWorkbook}
+import org.http4s.client.Client
 import org.lunary.Models._
 
 import scala.collection.immutable.ListMap
-import scala.util.Try
+import cats.implicits._
 
 class Excel(config: Config, areaConfig: AreaConfig) {
 
@@ -19,71 +20,75 @@ class Excel(config: Config, areaConfig: AreaConfig) {
   private val startingCell = 1
   private val area = areaConfig.area
 
-  def generate(file: File, sets: ListMap[String, String], client: CloseableHttpClient): Either[Throwable, Unit] = {
+  def generate(file: File, sets: ListMap[String, String], clientResource: Resource[IO, Client[IO]]): IO[Unit] = {
 
     if (file.exists() && config.getBoolean("deleteExistingFile")) {
       file.delete()
     }
 
     val job = new Job(areaConfig)
+    clientResource.use { client =>
 
-    val cardsResult: List[Either[Throwable, List[Card]]] = sets.toList.reverse.map {
-      case (category, _) => job.request(category, client) flatMap Parsers.parse
-    }
-
-    //如何變成Either[Throwable, List[Card]]?
-    val cards: Either[Throwable, List[Card]] = cardsResult.foldRight[Either[Throwable, List[Card]]](Right(Nil)) { (result, either) =>
-      (result, either) match {
-        case (Right(aggregated), Right(cards)) => Right(aggregated ++ cards)
-        case (r: Left[Throwable, List[Card]], _) => r
-        case (_, c: Left[Throwable, List[Card]]) => c
+      val cardsResult: List[IO[List[Card]]] = sets.toList.reverse.map {
+        case (category, _) => job.request(category, client) flatMap(html => IO.fromEither(Parsers.parse(html)))
       }
-    }
 
-    //分成4種不同的LIST分開處理
-    val separated: Either[Throwable, (List[MobileSuit], List[Pilot], List[Ignition], List[Boost], List[UnknownType])] = cards map {
-      _.foldLeft[(List[MobileSuit], List[Pilot], List[Ignition], List[Boost], List[UnknownType])]((Nil, Nil, Nil, Nil, Nil)) { (lists, card) =>
-        card match {
-          case ms: MobileSuit => lists.copy(_1 = lists._1 :+ ms)
-          case p: Pilot => lists.copy(_2 = lists._2 :+ p)
-          case i: Ignition => lists.copy(_3 = lists._3 :+ i)
-          case b: Boost => lists.copy(_4 = lists._4 :+ b)
-          case u: UnknownType => lists.copy(_5 = lists._5 :+ u)
+      val cards: IO[List[Card]] = cardsResult.sequence.map(_.flatten)
+
+      //分成4種不同的LIST分開處理
+      val separated: IO[(List[MobileSuit], List[Pilot], List[Ignition], List[Boost], List[UnknownType])] = cards map {
+        _.foldLeft[(List[MobileSuit], List[Pilot], List[Ignition], List[Boost], List[UnknownType])]((Nil, Nil, Nil, Nil, Nil)) { (lists, card) =>
+          card match {
+            case ms: MobileSuit => lists.copy(_1 = lists._1 :+ ms)
+            case p: Pilot => lists.copy(_2 = lists._2 :+ p)
+            case i: Ignition => lists.copy(_3 = lists._3 :+ i)
+            case b: Boost => lists.copy(_4 = lists._4 :+ b)
+            case u: UnknownType => lists.copy(_5 = lists._5 :+ u)
+          }
         }
       }
-    }
 
-    //產生Excel
-    val excel: Either[Throwable, XSSFWorkbook] = separated.map {
-      case (mobileSuits, pilots, ignitions, boosts, unknowns) =>
-        val book = new XSSFWorkbook()
-        val generateTransformed = config.getBoolean("generateTransformed")
-        writeMS(book, area.sheetNameMobileSuit, mobileSuits, generateTransformed)
-        writePilot(book, area.sheetNamePilot, pilots)
-        writeIgnition(book, area.sheetNameIgnition, ignitions)
-        writeBoost(book, area.sheetNameBoost, boosts)
-        writeUnknown(book, "Unknown", unknowns)
-        book
-    }
-
-    //寫成檔案，IO
-    excel.flatMap { book =>
-      var fos: FileOutputStream = null
-      val result = Try {
-        fos = new FileOutputStream(file)
-        book.write(fos)
+      //產生Excel
+      val excel: IO[XSSFWorkbook] = separated.map {
+        case (mobileSuits, pilots, ignitions, boosts, unknowns) =>
+          val book = new XSSFWorkbook()
+          val generateTransformed = config.getBoolean("generateTransformed")
+          writeMS(book, area.sheetNameMobileSuit, mobileSuits, generateTransformed)
+          writePilot(book, area.sheetNamePilot, pilots)
+          writeIgnition(book, area.sheetNameIgnition, ignitions)
+          writeBoost(book, area.sheetNameBoost, boosts)
+          writeUnknown(book, "Unknown", unknowns)
+          book
       }
-      if (fos != null) {
-        fos.close()
-      }
-      result.toEither
-    }
 
+      //寫成檔案，IO
+      excel.flatMap { book =>
+        Resource.fromAutoCloseable(getOutputStream(file)).use { os =>
+          IO(book.write(os))
+        }
+      }
+//      excel.flatMap { book =>
+//        var fos: FileOutputStream = null
+//        val result = Try {
+//          fos = new FileOutputStream(file)
+//          book.write(fos)
+//        }
+//        if (fos != null) {
+//          fos.close()
+//        }
+//        result.toEither
+//      }
+
+    }
   }
 
-  def writeMS(wb: XSSFWorkbook, sheetName: String, cards: Seq[MobileSuit], generateTransformed: Boolean = false): Unit =
+  private def getOutputStream(file: File): IO[OutputStream] = {
+    IO(new BufferedOutputStream(new FileOutputStream(file)))
+  }
 
-    if (!cards.isEmpty) {
+  private def writeMS(wb: XSSFWorkbook, sheetName: String, cards: Seq[MobileSuit], generateTransformed: Boolean = false): Unit =
+
+    if (cards.nonEmpty) {
 
       val sheet = wb.createSheet(sheetName)
       val titleRow = sheet.createRow(0)
@@ -147,7 +152,7 @@ class Excel(config: Config, areaConfig: AreaConfig) {
     }
 
 
-  def writePilot(wb: XSSFWorkbook, sheetName: String, cards: Seq[Pilot]): Unit =
+  private def writePilot(wb: XSSFWorkbook, sheetName: String, cards: Seq[Pilot]): Unit =
     if (!cards.isEmpty) {
 
       val sheet = wb.createSheet(sheetName)
@@ -186,7 +191,7 @@ class Excel(config: Config, areaConfig: AreaConfig) {
 
     }
 
-  def writeIgnition(wb: XSSFWorkbook, sheetName: String, cards: Seq[Ignition]): Unit =
+  private def writeIgnition(wb: XSSFWorkbook, sheetName: String, cards: Seq[Ignition]): Unit =
     if (cards.nonEmpty) {
 
       val sheet = wb.createSheet(sheetName)
@@ -213,7 +218,7 @@ class Excel(config: Config, areaConfig: AreaConfig) {
       }
     }
 
-  def writeBoost(wb: XSSFWorkbook, sheetName: String, cards: Seq[Boost]): Unit =
+  private def writeBoost(wb: XSSFWorkbook, sheetName: String, cards: Seq[Boost]): Unit =
     if (cards.nonEmpty) {
 
       val sheet = wb.createSheet(sheetName)
@@ -240,7 +245,7 @@ class Excel(config: Config, areaConfig: AreaConfig) {
       }
     }
 
-  def writeUnknown(wb: XSSFWorkbook, sheetName: String, cards: Seq[UnknownType]): Unit =
+  private def writeUnknown(wb: XSSFWorkbook, sheetName: String, cards: Seq[UnknownType]): Unit =
     if (!cards.isEmpty) {
       val sheet = wb.createSheet(sheetName)
 
@@ -265,7 +270,7 @@ class Excel(config: Config, areaConfig: AreaConfig) {
     }
 
 
-  def writeBasic(row: XSSFRow, startColumn: Int, basic: Basic, ch: CreationHelper): Int = {
+  private def writeBasic(row: XSSFRow, startColumn: Int, basic: Basic, ch: CreationHelper): Int = {
 
     row.createCell(startColumn).setCellValue(basic.set)
     row.createCell(startColumn + 1).setCellValue(basic.cardNo)
@@ -283,7 +288,7 @@ class Excel(config: Config, areaConfig: AreaConfig) {
     startColumn + 4
   }
 
-  def getBurstType(imageLink: String): String =
+  private def getBurstType(imageLink: String): String =
     if (imageLink.endsWith("burst-atk.png")) {
       area.burstAttack //"アタック"
     }
@@ -298,5 +303,5 @@ class Excel(config: Config, areaConfig: AreaConfig) {
     }
 
 
-  val titleBegin = area.baseTitles //List("所有する", "弾", "カード番号", "レアリティ", "カード名", "画像")
+  private val titleBegin = area.baseTitles //List("所有する", "弾", "カード番号", "レアリティ", "カード名", "画像")
 }
