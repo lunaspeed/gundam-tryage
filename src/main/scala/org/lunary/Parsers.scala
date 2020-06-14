@@ -3,11 +3,12 @@ package org.lunary
 import henix.ssoup.{QueryParser, Selectors}
 import Selectors._
 import cats.data.NonEmptyList
+import cats.implicits._
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.select.Evaluator
 import org.lunary.Models._
-import org.lunary.Parsers.extractBasic
+
 
 import collection.JavaConverters._
 import scala.util.Try
@@ -58,13 +59,16 @@ object Parsers {
 
       }
 
-      val cardResult: ParseResult = cards.foldLeft[ParseResult](Right(Nil)) { (r, c) =>
-        (r, c) match {
-          case (Right(cards), Right(card)) => Right[Throwable, List[Card]](cards :+ card)
-          case (l@Left(_), _) => l
-          case (_, l@Left(_)) => l.asInstanceOf[ParseResult]
-        }
-      }
+      val cardResult: ParseResult = cards.toList.sequence
+
+
+//      cards.foldLeft[ParseResult](Right(Nil)) { (r, c) =>
+//        (r, c) match {
+//          case (Right(cards), Right(card)) => Right[Throwable, List[Card]](cards :+ card)
+//          case (l@Left(_), _) => l
+//          case (_, l@Left(_)) => l.asInstanceOf[ParseResult]
+//        }
+//      }
 
       cardResult
     }

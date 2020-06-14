@@ -194,8 +194,8 @@ object Models {
   case object Japan extends Area {
 
     override val configName = "japan"
-    override val combinedSets = ebSets //++ dwSets ++ oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
-    override val setGroups = "eb" -> ebSets :: Nil//"dw" -> dwSets :: "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
+    override val combinedSets = ebSets ++ dwSets ++ oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
+    override val setGroups = "eb" -> ebSets :: "dw" -> dwSets :: "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
 
     override val sheetNameMobileSuit = "モビルスーツ"
     override val sheetNamePilot = "パイロット"

@@ -27,33 +27,30 @@ object Main extends IOApp {
         val excel = new Excel(config, areaConfig)
         excel.generate(file, sets, clientResource)
     }
-    val result = res.sequence
+    val result: IO[List[Either[Throwable, Unit]]] = res.sequence
 
-    result.map(_ => ExitCode.Success)
+    val accumulatedResults: IO[Either[NonEmptyList[Throwable], Unit]] = result.map(_.foldLeft[Either[NonEmptyList[Throwable], Unit]](Right(Unit)) { (r, e) =>
+      (r, e) match {
+        case (Left(es), Left(e)) => Left(es :+ e)
+        case (l @ Left(_), _) => l
+        case (_, Left(e)) => Left(NonEmptyList.one(e))
+        case (a, _) => a
+      }
+    })
 
 
-//    val result: Result = area.setGroups.par.map {
-//        case (groupSymbol, sets) =>
-//          val file = new File(folder, s"${areaConfig.filePrefix}-gundam-tryage-$groupSymbol.xlsx")
-//          val excel = new Excel(config, areaConfig)
-//          excel.generate(file, sets, client)
-//      }.foldLeft[Result](Right(Unit)) { (r, e) =>
-//
-//        (r, e) match {
-//          case (Left(es), Left(e)) => Left(es ++ List(e))
-//          case (l @ Left(_), _) => l
-//          case (_, Left(e)) => Left(NonEmptyList.of(e))
-//          case (a, _) => a
-//        }
-//      }
-
-    //print errors if any
-//    for {
-//      errors <- result.left
-//      error <- errors.toList.zipWithIndex
-//    } {
-//      println(s"error: ${error._2 + 1}: ")
-//      error._1.printStackTrace()
-//    }
+    accumulatedResults.map { results =>
+      results match {
+        case Right(_) => ExitCode.Success
+        case Left(es) =>
+          //print errors if any
+          es.toList.zipWithIndex.foreach {
+            case (e, i) =>
+              println(s"error: ${i + 1}: ")
+              e.printStackTrace()
+          }
+          ExitCode.Error
+      }
+    }
   }
 }

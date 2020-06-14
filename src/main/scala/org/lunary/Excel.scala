@@ -13,14 +13,16 @@ import org.lunary.Models._
 
 import scala.collection.immutable.ListMap
 import cats.implicits._
+import org.lunary.Parsers.ParseResult
 
 class Excel(config: Config, areaConfig: AreaConfig) {
 
   private val imageBase = areaConfig.urlBase
   private val startingCell = 1
   private val area = areaConfig.area
+  type CardSet = (List[MobileSuit], List[Pilot], List[Ignition], List[Boost], List[UnknownType])
 
-  def generate(file: File, sets: ListMap[String, String], clientResource: Resource[IO, Client[IO]]): IO[Unit] = {
+  def generate(file: File, sets: ListMap[String, String], clientResource: Resource[IO, Client[IO]]): IO[Either[Throwable, Unit]] = {
 
     if (file.exists() && config.getBoolean("deleteExistingFile")) {
       file.delete()
@@ -29,58 +31,60 @@ class Excel(config: Config, areaConfig: AreaConfig) {
     val job = new Job(areaConfig)
     clientResource.use { client =>
 
-      val cardsResult: List[IO[List[Card]]] = sets.toList.reverse.map {
-        case (category, _) => job.request(category, client) flatMap(html => IO.fromEither(Parsers.parse(html)))
+      val cardsResult: List[IO[ParseResult]] = sets.toList.reverse.map {
+        case (category, _) => job.request(category, client) map Parsers.parse
       }
 
-      val cards: IO[List[Card]] = cardsResult.sequence.map(_.flatten)
+      val cards: IO[ParseResult] = cardsResult.sequence map { cards =>
+        cards.sequence map(_.flatten)
+      }
 
       //分成4種不同的LIST分開處理
-      val separated: IO[(List[MobileSuit], List[Pilot], List[Ignition], List[Boost], List[UnknownType])] = cards map {
-        _.foldLeft[(List[MobileSuit], List[Pilot], List[Ignition], List[Boost], List[UnknownType])]((Nil, Nil, Nil, Nil, Nil)) { (lists, card) =>
-          card match {
-            case ms: MobileSuit => lists.copy(_1 = lists._1 :+ ms)
-            case p: Pilot => lists.copy(_2 = lists._2 :+ p)
-            case i: Ignition => lists.copy(_3 = lists._3 :+ i)
-            case b: Boost => lists.copy(_4 = lists._4 :+ b)
-            case u: UnknownType => lists.copy(_5 = lists._5 :+ u)
-          }
-        }
-      }
+      val separated: IO[Either[Throwable, CardSet]] = cards map toCardSet
+
 
       //產生Excel
-      val excel: IO[XSSFWorkbook] = separated.map {
-        case (mobileSuits, pilots, ignitions, boosts, unknowns) =>
-          val book = new XSSFWorkbook()
-          val generateTransformed = config.getBoolean("generateTransformed")
-          writeMS(book, area.sheetNameMobileSuit, mobileSuits, generateTransformed)
-          writePilot(book, area.sheetNamePilot, pilots)
-          writeIgnition(book, area.sheetNameIgnition, ignitions)
-          writeBoost(book, area.sheetNameBoost, boosts)
-          writeUnknown(book, "Unknown", unknowns)
-          book
-      }
+      val excel: IO[Either[Throwable, XSSFWorkbook]] = separated map toWorkbook
 
       //寫成檔案，IO
       excel.flatMap { book =>
         Resource.fromAutoCloseable(getOutputStream(file)).use { os =>
-          IO(book.write(os))
+          IO(writeWorkbook(book, os))
         }
       }
-//      excel.flatMap { book =>
-//        var fos: FileOutputStream = null
-//        val result = Try {
-//          fos = new FileOutputStream(file)
-//          book.write(fos)
-//        }
-//        if (fos != null) {
-//          fos.close()
-//        }
-//        result.toEither
-//      }
 
     }
   }
+
+  private def toCardSet(cards: ParseResult): Either[Throwable, CardSet] =  cards map {
+    _.foldLeft[CardSet]((Nil, Nil, Nil, Nil, Nil)) { (lists, card) =>
+      card match {
+        case ms: MobileSuit => lists.copy(_1 = lists._1 :+ ms)
+        case p: Pilot => lists.copy(_2 = lists._2 :+ p)
+        case i: Ignition => lists.copy(_3 = lists._3 :+ i)
+        case b: Boost => lists.copy(_4 = lists._4 :+ b)
+        case u: UnknownType => lists.copy(_5 = lists._5 :+ u)
+      }
+    }
+  }
+
+  private def toWorkbook(cardSet: Either[Throwable, CardSet]): Either[Throwable, XSSFWorkbook] = cardSet map {
+    case (mobileSuits, pilots, ignitions, boosts, unknowns) =>
+      val book = new XSSFWorkbook()
+      val generateTransformed = config.getBoolean("generateTransformed")
+      writeMS(book, area.sheetNameMobileSuit, mobileSuits, generateTransformed)
+      writePilot(book, area.sheetNamePilot, pilots)
+      writeIgnition(book, area.sheetNameIgnition, ignitions)
+      writeBoost(book, area.sheetNameBoost, boosts)
+      writeUnknown(book, "Unknown", unknowns)
+      book
+  }
+
+  private def writeWorkbook(book: Either[Throwable, XSSFWorkbook], os: OutputStream): Either[Throwable, Unit] =
+    book map {
+      _.write(os)
+    }
+
 
   private def getOutputStream(file: File): IO[OutputStream] = {
     IO(new BufferedOutputStream(new FileOutputStream(file)))
