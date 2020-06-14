@@ -116,7 +116,7 @@ object Parsers {
       secondPart <- selectOne(e |>> "div.info1col_v") match {
         case Some(info) =>
           for {
-            secondBasic <- extractBasicNew(info, basic.rarity, Some(basic.image))
+            secondBasic <- extractBasicNew(info, Some(basic.rarity), Some(basic.image))
             second <- toMs(secondBasic, info, None)
           } yield Some(second)
         case None => Right(None)
@@ -229,25 +229,21 @@ object Parsers {
     } yield UnknownType(basic, classes.toSet)
   }.toEither.flatMap(identity)
 
-  def extractBasicNew(e: Element, knownRarity: Option[String] = None, knownImage: Option[String] = None): SelectResult[Basic] = for {
+  def extractBasicNew(e: Element, knownRarity: Option[Option[String]] = None, knownImage: Option[String] = None): SelectResult[Basic] = for {
     firstPart <- selectOne(e |>> "dl.date1col").asMustResult("e |>> \"dl.date1col\"")
     cardNumber <- selectOne(firstPart |>> "dd.cardNumber").asMustResult("firstPart |>> \"dd.cardNumber\"")
     cardNo = cardNumber.text().trim
     set = cardNo.split('-')(0)
     name <- selectOne(firstPart |>> "dd.charaName").asMustResult("firstPart |>> \"dd.charaName\"")
-    rarity <- knownRarity match {
-      case r@Some(_) => Right(r)
-      case None =>
+    rarity <- knownRarity.fold({
         selectOne(e |>> "div.reaCol").asMustResult("e |>> \"div.reaCol\"")
-            .flatMap(r => selectOne(r |>> "dd").asMustResult("rarityCol |>> \"dd\""))
-            .map(_.text().toSome())
-    }
-    img <- knownImage match {
-      case Some(u) => Right(u)
-      case None =>
+          .flatMap(r => selectOne(r |>> "dd").asMustResult("rarityCol |>> \"dd\""))
+          .map(_.text().toSome())
+      }) {Right(_)}
+    img <- knownImage.fold({
         selectOne(e >> "div.cardCol" > "img").asMustResult("e >> \"div.cardCol\" > \"img\"")
           .map(_.attr("src").trim)
-    }
+      }) (Right(_))
 
   } yield {
     Basic(set, cardNo, name.text().trim, rarity, img)

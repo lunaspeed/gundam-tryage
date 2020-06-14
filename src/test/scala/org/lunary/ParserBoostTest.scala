@@ -1,9 +1,9 @@
 package org.lunary
 
 import org.jsoup.Jsoup
-import org.scalatest.flatspec.AnyFlatSpecLike
+import org.scalatest.flatspec.AnyFlatSpec
 
-class ParserBoostTest extends AnyFlatSpecLike {
+class ParserBoostTest extends AnyFlatSpec {
 
   val boostHtml =
     """

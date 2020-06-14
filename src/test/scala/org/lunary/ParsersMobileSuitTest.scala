@@ -2,9 +2,9 @@ package org.lunary
 
 import cats.data.NonEmptyList
 import org.jsoup.Jsoup
-import org.scalatest.flatspec.AnyFlatSpecLike
+import org.scalatest.flatspec.AnyFlatSpec
 
-class ParsersMobileSuitTest extends AnyFlatSpecLike {
+class ParsersMobileSuitTest extends AnyFlatSpec {
 
   val basicMsHtml =
     """<div>
@@ -528,4 +528,171 @@ class ParsersMobileSuitTest extends AnyFlatSpecLike {
       case Left(e) => throw e
     }
   }
+
+  val promoMsHtml = """ <div class="carddateCol mscardCol">
+                      | <div class="dateCol">
+                      |  <div class="col_r">
+                      |   <div class="info1col">
+                      |    <dl class="date1col">
+                      |     <dt>
+                      |      カードリスト
+                      |     </dt>
+                      |     <dd class="cardNumber">
+                      |      DPR-001
+                      |     </dd>
+                      |     <dd class="charaName">
+                      |      ガンダムエクシア
+                      |     </dd>
+                      |     <dd class="wazaName">
+                      |      トランザム・セブンソード
+                      |     </dd>
+                      |     <dd class="statusCol">
+                      |      <ul class="status statusdateCol">
+                      |       <li class="hpPoint">3900</li>
+                      |       <li class="powerPoint">3200</li>
+                      |       <li class="spPoint">1400</li>
+                      |      </ul>
+                      |     </dd>
+                      |     <dd>
+                      |      <ul class="atack">
+                      |       <li class="spPower">5300</li>
+                      |       <li class="Cost">5</li>
+                      |      </ul>
+                      |     </dd>
+                      |     <dd class="placeCol">
+                      |      <ul class="place">
+                      |       <li class="pSpace">○</li>
+                      |       <li class="pGrand">◎</li>
+                      |       <li class="p3">▲</li>
+                      |       <li class="p4">○</li>
+                      |       <li class="p5">▲</li>
+                      |      </ul>
+                      |     </dd>
+                      |     <dd class="MecName">
+                      |      ソレスタルビーイング
+                      |     </dd>
+                      |    </dl>
+                      |   </div>
+                      |   <div class="info2Col">
+                      |    <dl>
+                      |     <dt>
+                      |      <img src="../images/cardlist/eb/ms/tit_pl.png" width="85" height="20" alt="パイロット">
+                      |     </dt>
+                      |     <dd>
+                      |      刹那・F・セイエイ
+                      |     </dd>
+                      |    </dl>
+                      |   </div>
+                      |   <div class="info3Col MsAbiCol">
+                      |    <dl>
+                      |     <dt>
+                      |      <p>トランザム</p>
+                      |     </dt>
+                      |     <dd>
+                      |      <p>【一定確率】カードをこすってトランザム! 相手の攻撃を回避した後、反撃する。 </p>
+                      |     </dd>
+                      |    </dl>
+                      |    <ul class="MsAbi abiIcon">
+                      |     <li class="icon"> <span class="transam"></span> </li>
+                      |    </ul>
+                      |   </div>
+                      |   <img src="../images/cardlist/eb/ms/v_arw.png" width="580" height="44" alt="">
+                      |   <div class="info1col_v">
+                      |    <dl class="date1col">
+                      |     <dt>
+                      |      カードリスト
+                      |     </dt>
+                      |     <dd class="cardNumber">
+                      |      DPR-001
+                      |     </dd>
+                      |     <dd class="charaName">
+                      |      ガンダムエクシアリペア
+                      |     </dd>
+                      |     <dd class="wazaName">
+                      |      ヴァルネッド・ソードダンサー
+                      |     </dd>
+                      |     <dd class="statusCol statusdateCol">
+                      |      <ul class="status">
+                      |       <li class="hpPoint">3900</li>
+                      |       <li class="powerPoint">2600</li>
+                      |       <li class="spPoint">2000</li>
+                      |      </ul>
+                      |     </dd>
+                      |     <dd>
+                      |      <ul class="atack">
+                      |       <li class="spPower">5800</li>
+                      |       <li class="Cost">6</li>
+                      |      </ul>
+                      |     </dd>
+                      |     <dd class="placeCol">
+                      |      <ul class="place">
+                      |       <li class="pSpace">○</li>
+                      |       <li class="pGrand">◎</li>
+                      |       <li class="p3">▲</li>
+                      |       <li class="p4">○</li>
+                      |       <li class="p5">▲</li>
+                      |      </ul>
+                      |     </dd>
+                      |     <dd class="MecName">
+                      |      ソレスタルビーイング
+                      |     </dd>
+                      |    </dl>
+                      |   </div>
+                      |   <div class="info2Col">
+                      |    <dl>
+                      |     <dt>
+                      |      <img src="../images/cardlist/eb/ms/tit_pl.png" width="85" height="20" alt="パイロット">
+                      |     </dt>
+                      |     <dd>
+                      |      刹那・F・セイエイ
+                      |     </dd>
+                      |    </dl>
+                      |   </div>
+                      |   <div class="info3Col MsAbiCol">
+                      |    <dl>
+                      |     <dt>
+                      |      <p>奮迅</p>
+                      |     </dt>
+                      |     <dd>
+                      |      <p>【HP0,一定確率,1回限り】機能停止を回避して、必殺技で反撃する。更に相手が必殺技の場合は発動率アップ。</p>
+                      |     </dd>
+                      |    </dl>
+                      |    <ul class="MsAbi abiIcon">
+                      |     <li class="icon"> <span class="hunjin"></span> </li>
+                      |    </ul>
+                      |   </div>
+                      |  </div>
+                      |  <div class="col_l">
+                      |   <div class="cardCol">
+                      |    <img src="../images/cardlist/dammy/DPR-001.png" width="161" height="235" alt="ガンダムエクシア">
+                      |   </div>
+                      |   <div class="reaCol">
+                      |    <dl>
+                      |     <dt>
+                      |      <img src="../images/cardlist/eb/ms/tit_rea.png" width="160" height="28" alt="レアリティ">
+                      |     </dt>
+                      |     <dd>
+                      |      -
+                      |     </dd>
+                      |    </dl>
+                      |   </div>
+                      |   <div class="logoCol">
+                      |    <img src="../images/cardlist/tekketsu/parts/logo/logo_gundam-oo.png">
+                      |   </div>
+                      |  </div>
+                      | </div>
+                      | <div class="promCol">
+                      |  DELTA WARS 01稼働記念 ヴァリアブルカード出撃キャンペーン
+                      | </div>
+                      |</div>
+                      |""".stripMargin
+  final val promoMs = Jsoup.parse(promoMsHtml)
+  "promo mobile suite information" should "be parsed from MS html" in {
+    Parsers.extractMobileSuit(promoMs) match {
+      case Right(ms) =>
+        assertResult(None)(ms.basic.rarity)
+      case Left(e) => throw e
+    }
+  }
+
 }

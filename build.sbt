@@ -17,7 +17,7 @@ libraryDependencies ++= List(
   "commons-io" % "commons-io" % "2.7",
   "com.typesafe" % "config" % "1.4.0",
   "org.typelevel" %% "cats-core" % "1.0.1",
-  "org.scalatest" %% "scalatest" % "3.0.5" % Test)
+  "org.scalatest" %% "scalatest" % "3.1.2" % Test)
 
 val http4sVersion = "1.0.0-M0+385-ae5377f0-SNAPSHOT"
 

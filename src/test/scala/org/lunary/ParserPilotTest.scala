@@ -2,9 +2,9 @@ package org.lunary
 
 import org.jsoup.Jsoup
 import org.lunary.Models.{Attribute, ExAwaken}
-import org.scalatest.flatspec.AnyFlatSpecLike
+import org.scalatest.flatspec.AnyFlatSpec
 
-class ParserPilotTest extends AnyFlatSpecLike {
+class ParserPilotTest extends AnyFlatSpec {
 
   val pilotHtml =
     """<div>
