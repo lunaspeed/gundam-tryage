@@ -100,13 +100,14 @@ object Parsers {
         abilityString <- selectOne(info3 >> "dt" > "p").asMustResult("info3 >> \"dt\" > \"p\"") //.text.trim.split("/").toList
         abilities = abilityString.text.trim.split("/").toList
         text <- selectOne(info3 >> "dd" > "p").asMustResult("info3 >> \"dd\" > \"p\"") //.text.trim
+        promo <- Right(selectOne(e |>> "div.promCol").map(_.text))
       } yield {
 
         MobileSuit(basic,
           pilotName, attr, special.text.trim.toInt, cost.text.trim.toInt,
           PowerRank(space.text.trim, ground.text.trim, water, forest, desert),
           wazaName.text.trim, mecName, aceEffect, NonEmptyList(abilities.head, abilities.tail), text.text.trim,
-          transformed)
+          transformed, promo)
       }
     }
 

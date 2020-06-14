@@ -151,13 +151,14 @@ class Excel(config: Config, areaConfig: AreaConfig) {
         row.createCell(start + 14).setCellValue(ms.text)
         ms.aceEffect.foreach(row.createCell(start + 15).setCellValue(_))
         ms.mecName.foreach(row.createCell(start + 16).setCellValue(_))
+        ms.promoInfo.foreach(row.createCell(start + 17).setCellValue(_))
       }
 
     }
 
 
   private def writePilot(wb: XSSFWorkbook, sheetName: String, cards: Seq[Pilot]): Unit =
-    if (!cards.isEmpty) {
+    if (cards.nonEmpty) {
 
       val sheet = wb.createSheet(sheetName)
 

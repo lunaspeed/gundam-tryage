@@ -426,7 +426,7 @@ class ParsersMobileSuitTest extends AnyFlatSpec {
         assertResult("ガンダムEz8")(t.basic.name)
         assertResult(None)(t.transformed)
         assertResult("../images/cardlist/dammy/DW1-002.png")(t.basic.image)
-        println(ms)
+//        println(ms)
       case Left(e) => throw e
     }
   }
@@ -435,7 +435,7 @@ class ParsersMobileSuitTest extends AnyFlatSpec {
     Parsers.extractMobileSuit(aceMs) match {
       case Right(ms) =>
         assertResult(Some("ラウンド2からずっと受けるダメージ-500。"))(ms.aceEffect)
-        println(ms)
+//        println(ms)
       case Left(e) => throw e
     }
   }
@@ -524,7 +524,7 @@ class ParsersMobileSuitTest extends AnyFlatSpec {
     Parsers.extractMobileSuit(newMs) match {
       case Right(ms) =>
         assertResult(Some("ラウンド2からずっと仲間全員のスピード、必殺技+1500。"))(ms.aceEffect)
-        println(ms)
+//        println(ms)
       case Left(e) => throw e
     }
   }
@@ -691,6 +691,7 @@ class ParsersMobileSuitTest extends AnyFlatSpec {
     Parsers.extractMobileSuit(promoMs) match {
       case Right(ms) =>
         assertResult(None)(ms.basic.rarity)
+        assertResult(Some("DELTA WARS 01稼働記念 ヴァリアブルカード出撃キャンペーン"))(ms.promoInfo)
       case Left(e) => throw e
     }
   }

@@ -21,7 +21,8 @@ object Models {
                         pilotName: Option[String], attribute: Attribute, special: Int, cost: Int,
                         powerRank: PowerRank,
                         wazaName: String, mecName: Option[String], aceEffect: Option[String], abilities: NonEmptyList[String], text: String,
-                        transformed: Option[MobileSuit] = None) extends Card
+                        transformed: Option[MobileSuit] = None,
+                        promoInfo: Option[String] = None) extends Card
 
   case class Pilot(basic: Basic,
                    attribute: Attribute,
@@ -207,7 +208,7 @@ object Models {
     override val mobileSuitTitles = List("パイロット名",
       "ＨＰ", "アタック", "スピード", "必殺技", "必殺威力", "必殺コスト",
       "宇宙適性", "地上適性", "水中適性", "森林適性", "砂漠適性",
-      "アビリティ名", "アビリティ", "ACE", "開発系統")
+      "アビリティ名", "アビリティ", "ACE", "開発系統", "プロモ")
 
     override val pilotTitles: List[String] = List(
       "ＨＰ", "アタック", "スピード", "バースト", "バーストの種類", "バーストレベル",
