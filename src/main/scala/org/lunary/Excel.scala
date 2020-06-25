@@ -2,6 +2,7 @@ package org.lunary
 
 import java.io.{BufferedOutputStream, File, FileOutputStream, OutputStream}
 
+import cats.data.EitherT
 import cats.effect.{IO, Resource}
 import com.typesafe.config.Config
 import org.apache.poi.common.usermodel.HyperlinkType
@@ -39,25 +40,21 @@ class Excel(config: Config, areaConfig: AreaConfig) {
         cards.sequence map(_.flatten)
       }
 
-      //分成4種不同的LIST分開處理
-      val separated: IO[Either[Throwable, CardSet]] = cards map toCardSet
+      val result = for {
+        cs <- EitherT(cards)
+        separated = toCardSet(cs)
+        excel = toWorkbook(separated)
+        res <- EitherT.liftF[IO, Throwable, Unit](Resource.fromAutoCloseable(getOutputStream(file)).use { os =>
+          writeWorkbook(excel, os)
+        })
+      } yield res
 
-
-      //產生Excel
-      val excel: IO[Either[Throwable, XSSFWorkbook]] = separated map toWorkbook
-
-      //寫成檔案，IO
-      excel.flatMap { book =>
-        Resource.fromAutoCloseable(getOutputStream(file)).use { os =>
-          IO(writeWorkbook(book, os))
-        }
-      }
-
+      result.value
     }
   }
 
-  private def toCardSet(cards: ParseResult): Either[Throwable, CardSet] =  cards map {
-    _.foldLeft[CardSet]((Nil, Nil, Nil, Nil, Nil)) { (lists, card) =>
+  private def toCardSet(cards: List[Card]): CardSet =
+    cards.foldLeft[CardSet]((Nil, Nil, Nil, Nil, Nil)) { (lists, card) =>
       card match {
         case ms: MobileSuit => lists.copy(_1 = lists._1 :+ ms)
         case p: Pilot => lists.copy(_2 = lists._2 :+ p)
@@ -66,9 +63,9 @@ class Excel(config: Config, areaConfig: AreaConfig) {
         case u: UnknownType => lists.copy(_5 = lists._5 :+ u)
       }
     }
-  }
 
-  private def toWorkbook(cardSet: Either[Throwable, CardSet]): Either[Throwable, XSSFWorkbook] = cardSet map {
+
+  private def toWorkbook(cardSet: CardSet): XSSFWorkbook = cardSet match {
     case (mobileSuits, pilots, ignitions, boosts, unknowns) =>
       val book = new XSSFWorkbook()
       val generateTransformed = config.getBoolean("generateTransformed")
@@ -80,11 +77,8 @@ class Excel(config: Config, areaConfig: AreaConfig) {
       book
   }
 
-  private def writeWorkbook(book: Either[Throwable, XSSFWorkbook], os: OutputStream): Either[Throwable, Unit] =
-    book map {
-      _.write(os)
-    }
-
+  private def writeWorkbook(book: XSSFWorkbook, os: OutputStream): IO[Unit] =
+    IO(book.write(os))
 
   private def getOutputStream(file: File): IO[OutputStream] = {
     IO(new BufferedOutputStream(new FileOutputStream(file)))
