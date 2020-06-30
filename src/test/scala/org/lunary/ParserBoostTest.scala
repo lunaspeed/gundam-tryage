@@ -67,7 +67,7 @@ class ParserBoostTest extends AnyFlatSpec {
 
   final val simpleBoost = Jsoup.parse(boostHtml)
   "boost card basics" should "be extracted" in {
-    Parsers.extractBasicNew(simpleBoost) match {
+    Parsers.extractBasic(simpleBoost) match {
       case Right(b) =>
         assertResult("フレイ・アルスター")(b.name)
       case Left(e) => throw e

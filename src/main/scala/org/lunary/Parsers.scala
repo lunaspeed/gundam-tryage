@@ -40,21 +40,24 @@ object Parsers {
               extractMobileSuit(d)
           case Some(cardType) if cardType.hasClass("plcardCol") =>
               extractPilot(d)
+          case Some(cardType) if cardType.hasClass("ignCol") =>
+            extractIgnition(d)
           case Some(cardType) if cardType.hasClass("boostCol") =>
               extractBoost(d)
           case Some(_) =>
               extractUnknownType(d, "carddateCol")
           case None =>
-            select(d > "div.frame").headOption match {
-              case Some(cardType) if cardType.hasClass("BgIgnlist") =>
-                  extractIgnition(d, false)
-              case Some(cardType) if cardType.hasClass("BgIgnlist02") =>
-                  extractIgnition(d, true)
-              case Some(cardType) =>
-                  extractUnknownType(cardType, "frame")
-              case None =>
-                extractUnknownType(d, "")
-            }
+//            select(d > "div.frame").headOption match {
+//              case Some(cardType) if cardType.hasClass("BgIgnlist") =>
+//                  extractIgnition(d, false)
+//              case Some(cardType) if cardType.hasClass("BgIgnlist02") =>
+//                  extractIgnition(d, true)
+//              case Some(cardType) =>
+//                  extractUnknownType(cardType, "frame")
+//              case None =>
+//                extractUnknownType(d, "")
+//            }
+            Left(new RuntimeException("failed to find div.carddateCol"))
         }).left.map(t => ParseException(d.html, t))
 
       }
@@ -112,12 +115,12 @@ object Parsers {
     }
 
     for {
-      basic <- extractBasicNew(e)
+      basic <- extractBasic(e)
       firstPart <- selectOne(e |>> "div.info1col").asMustResult("e |>> \"div.info1col\"")
       secondPart <- selectOne(e |>> "div.info1col_v") match {
         case Some(info) =>
           for {
-            secondBasic <- extractBasicNew(info, Some(basic.rarity), Some(basic.image))
+            secondBasic <- extractBasic(info, Some(basic.rarity), Some(basic.image))
             second <- toMs(secondBasic, info, None)
           } yield Some(second)
         case None => Right(None)
@@ -129,7 +132,7 @@ object Parsers {
 
   def extractPilot(e: Element): Either[Throwable, Pilot] = Try {
     for {
-      basic <- extractBasicNew(e)
+      basic <- extractBasic(e)
       attr <- extractAttribute(e)
       info1 <- selectOne(e |>> "div.info1col").asMustResult("e |>> \"div.info1col\"")
       info2 <- selectOne(info1 + "div.info2Col").asMustResult("info1 + \"div.info2Col\"")
@@ -161,24 +164,46 @@ object Parsers {
     }
   }.toEither.flatMap(identity)
 
-  def extractIgnition(e: Element, hasPilotSkill: Boolean): Either[Throwable, Ignition] = Try {
+//  def extractIgnition(e: Element, hasPilotSkill: Boolean): Either[Throwable, Ignition] = Try {
+//    for {
+//      basic <- extractBasic(e)
+//      wazaName <- e.findOne("dd.wazaName")
+//      special <- e.findOne("dd.spPower")
+//      pilotName <- e.findOne("dd.PlName")
+//      effectElement <- selectOne(e |>> "ul.ignEffect").asMustResult("e |>> \"ul.ignEffect\"")
+//      effect <- extractSkillAndText(effectElement)
+//      (effectSkill, effectText) = effect
+//      skillElement = selectOne(e |>> "ul.ignPlSkill")
+//      (pilotSkill, pilotSkillText) =
+//        if (hasPilotSkill && skillElement.isDefined) {
+//          extractSkillAndText(skillElement.get)
+//            .fold[(Option[String], Option[String])](_ => (None, None), { case (ps, pt) => (Some(ps), Some(pt)) })
+//        }
+//        else {
+//          (None, None)
+//        }
+//    } yield {
+//      Ignition(basic,
+//        wazaName.text.trim, special.text.trim.toInt, pilotName.text.trim,
+//        effectSkill, effectText, pilotSkill, pilotSkillText)
+//    }
+//  }.toEither.flatMap(identity)
+
+  def extractIgnition(e: Element): Either[Throwable, Ignition] = Try {
     for {
       basic <- extractBasic(e)
       wazaName <- e.findOne("dd.wazaName")
       special <- e.findOne("dd.spPower")
-      pilotName <- e.findOne("dd.PlName")
-      effectElement <- selectOne(e |>> "ul.ignEffect").asMustResult("e |>> \"ul.ignEffect\"")
-      effect <- extractSkillAndText(effectElement)
+      pilotNameParent <- e.findOne("div.info2Col")
+      pilotName <- pilotNameParent.findOne("dd")
+      effectElement <- selectOne(e |>> "div.MsAbiCol").asMustResult("e |>> \"div.MsAbiCol\"")
+      effect <- extractSkillAndTextNew(effectElement)
       (effectSkill, effectText) = effect
-      skillElement = selectOne(e |>> "ul.ignPlSkill")
-      (pilotSkill, pilotSkillText) =
-        if (hasPilotSkill && skillElement.isDefined) {
-          extractSkillAndText(skillElement.get)
-            .fold[(Option[String], Option[String])](_ => (None, None), { case (ps, pt) => (Some(ps), Some(pt)) })
-        }
-        else {
-          (None, None)
-        }
+      skillElement = selectOne(e |>> "div.PlAbiCol")
+      pilotEffect <-
+        skillElement.fold[SelectResult[(Option[String], Option[String])]](Right((None, None))){ e => extractSkillAndTextNew(e).map(p => (Some(p._1), Some(p._2)))}
+      (pilotSkill, pilotSkillText) = pilotEffect
+
     } yield {
       Ignition(basic,
         wazaName.text.trim, special.text.trim.toInt, pilotName.text.trim,
@@ -198,7 +223,7 @@ object Parsers {
       }
 
     for {
-      basic <- extractBasicNew(e)
+      basic <- extractBasic(e)
       boostEffectCol <- selectOne(e |>> ".boostEffectCol").asMustResult(".boostEffectCol")
       bEffectImg <- boostEffectCol.findOne("img[alt='ブースト効果']")
       bEffectDl = bEffectImg.parent().parent()
@@ -224,13 +249,13 @@ object Parsers {
 
   def extractUnknownType(e: Element, clazz: String): Either[Throwable, UnknownType] = Try {
     for {
-      basic <- extractBasicNew(e)
+      basic <- extractBasic(e)
       cardType <- selectOne(e > s"div.$clazz").asMustResult(s"""e > "div.$clazz"""")
       classes = cardType.classNames().asScala - clazz
     } yield UnknownType(basic, classes.toSet)
   }.toEither.flatMap(identity)
 
-  def extractBasicNew(e: Element, knownRarity: Option[Option[String]] = None, knownImage: Option[String] = None): SelectResult[Basic] = for {
+  def extractBasic(e: Element, knownRarity: Option[Option[String]] = None, knownImage: Option[String] = None): SelectResult[Basic] = for {
     firstPart <- selectOne(e |>> "dl.date1col").asMustResult("e |>> \"dl.date1col\"")
     cardNumber <- selectOne(firstPart |>> "dd.cardNumber").asMustResult("firstPart |>> \"dd.cardNumber\"")
     cardNo = cardNumber.text().trim
@@ -250,17 +275,17 @@ object Parsers {
     Basic(set, cardNo, name.text().trim, rarity, img)
   }
 
-  def extractBasic(e: Element): SelectResult[Basic] = for {
-    cardNumber <- selectOne(e |>> "dd.cardNumber").asMustResult("e |>> \"dd.cardNumber\"")
-    cardNo = cardNumber.text().trim
-    set = cardNo.split('-')(0)
-    name <- selectOne(e |>> "dd.charaName").asMustResult("e |>> \"dd.charaName\"")
-    rarityCol = selectOne(e |>> "dd.PreaP")
-    rarity <- rarityCol.orElse(selectOne(e |>> "dd.reaP")).asMustResult("e |>> \"dd.reaP\"")
-    img <- selectOne(e >> "dd.cardImg" > "img").asMustResult("e >> \"dd.cardImg\" > \"img\"")
-  } yield {
-    Basic(set, cardNo, name.text().trim, rarity.text.toSome, img.attr("src").trim)
-  }
+//  def extractBasic(e: Element): SelectResult[Basic] = for {
+//    cardNumber <- selectOne(e |>> "dd.cardNumber").asMustResult("e |>> \"dd.cardNumber\"")
+//    cardNo = cardNumber.text().trim
+//    set = cardNo.split('-')(0)
+//    name <- selectOne(e |>> "dd.charaName").asMustResult("e |>> \"dd.charaName\"")
+//    rarityCol = selectOne(e |>> "dd.PreaP")
+//    rarity <- rarityCol.orElse(selectOne(e |>> "dd.reaP")).asMustResult("e |>> \"dd.reaP\"")
+//    img <- selectOne(e >> "dd.cardImg" > "img").asMustResult("e >> \"dd.cardImg\" > \"img\"")
+//  } yield {
+//    Basic(set, cardNo, name.text().trim, rarity.text.toSome, img.attr("src").trim)
+//  }
 
   def extractAttribute(e: Element): SelectResult[Attribute] = {
     for {
@@ -274,6 +299,15 @@ object Parsers {
     for {
       skill <- e.findOne("li.Skill")
       text <- e.findOne("li.txt")
+    } yield (skill.text.trim, text.text.trim)
+  }
+
+  def extractSkillAndTextNew(e: Element): SelectResult[(String, String)] = {
+    for {
+      skillParent <- e.findOne("dt")
+      skill <- skillParent.findOne("p")
+      textParent <- e.findOne("dd")
+      text <- textParent.findOne("p")
     } yield (skill.text.trim, text.text.trim)
   }
 
