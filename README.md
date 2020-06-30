@@ -3,6 +3,7 @@
 Parses data from [Official website](http://www.gundam-try.com/cardlist/index.php) and write to Excel.
 
 Data grouped by set group:
+0. Promos
 1. Original
 2. ジオンの興亡
 3. BUILD MS
@@ -12,10 +13,12 @@ Data grouped by set group:
 7. VS IGNITION
 8. OPERATION ACE
 9. DELTA WARS
+10. EVOL BOOST!!
 
-See [application.conf](src/main/resources/application.conf) for settings.
+See [application.conf](src/main/resources/application.conf.bak) for settings.
 
-Run
+Run 
+(rename application.conf.bak to application.conf and modify accordingly)
 ```bash
 sbt run
 ```
