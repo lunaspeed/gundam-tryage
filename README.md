@@ -3,17 +3,18 @@
 Parses data from [Official website](http://www.gundam-try.com/cardlist/index.php) and write to Excel.
 
 Data grouped by set group:
-0. Promos
+
+1. Promos
 1. Original
-2. ジオンの興亡
-3. BUILD MS
-4. BUILD G
-5. 鉄血
-6. 鉄華繚乱
-7. VS IGNITION
-8. OPERATION ACE
-9. DELTA WARS
-10. EVOL BOOST!!
+1. ジオンの興亡
+1. BUILD MS
+1. BUILD G
+1. 鉄血
+1. 鉄華繚乱
+1. VS IGNITION
+1. OPERATION ACE
+1. DELTA WARS
+1. EVOL BOOST!!
 
 See [application.conf](src/main/resources/application.conf.bak) for settings.
 
