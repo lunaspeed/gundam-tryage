@@ -40,13 +40,18 @@ object Models {
                    lvl1Requirement: String, lvl1Effect: String,
                    lvl2Requirement: String, lvl2Effect: String,
                    lvl3Requirement: String, lvl3Effect: String) extends Card
+
   case class UnknownType(basic: Basic, typeClasses: Set[String]) extends Card
 
-  val ebSets = ListMap(
-    "168031" -> "EVOL BOOST!! 1弾"
+  val ebSets: ListMap[String, String] = ListMap(
+    "168031" -> "EVOL BOOST!! 1弾",
+    "168032" -> "EVOL BOOST!! 2弾",
+    "168033" -> "EVOL BOOST!! 3弾",
+    "168034" -> "EVOL BOOST!! 4弾",
+    "168035" -> "EVOL BOOST!! 5弾"
   )
 
-  val dwSets = ListMap(
+  val dwSets: ListMap[String, String] = ListMap(
     "168026" -> "DELTA WARS 6弾",
     "168025" -> "DELTA WARS 5弾",
     "168024" -> "DELTA WARS 4弾",
@@ -55,7 +60,7 @@ object Models {
     "168021" -> "DELTA WARS 1弾"
   )
 
-  val oaSets = ListMap(
+  val oaSets: ListMap[String, String] = ListMap(
     "168016" -> "OPERATION ACE 6弾",
     "168015" -> "OPERATION ACE 5弾",
     "168014" -> "OPERATION ACE 4弾",
@@ -63,21 +68,21 @@ object Models {
     "168012" -> "OPERATION ACE 2弾",
     "168011" -> "OPERATION ACE 1弾")
 
-  val vsSets = ListMap(
+  val vsSets: ListMap[String, String] = ListMap(
     "168605" -> "VS IGNITION 5弾",
     "168604" -> "VS IGNITION 4弾",
     "168603" -> "VS IGNITION 3弾",
     "168602" -> "VS IGNITION 2弾",
     "168601" -> "VS IGNITION 1弾")
 
-  val tkrSets = ListMap(
+  val tkrSets: ListMap[String, String] = ListMap(
     "168505" -> "鉄華繚乱5弾",
     "168504" -> "鉄華繚乱4弾",
     "168503" -> "鉄華繚乱3弾",
     "168502" -> "鉄華繚乱2弾",
     "168501" -> "鉄華繚乱1弾"
   )
-  val tkSets = ListMap(
+  val tkSets: ListMap[String, String] = ListMap(
     "168406" -> "鉄血の6弾",
     "168405" -> "鉄血の5弾",
     "168404" -> "鉄血の4弾",
@@ -85,7 +90,7 @@ object Models {
     "168402" -> "鉄血の2弾",
     "168401" -> "鉄血の1弾"
   )
-  val bgSets = ListMap(
+  val bgSets: ListMap[String, String] = ListMap(
     "168306" -> "BUILD G 6弾",
     "168305" -> "BUILD G 5弾",
     "168304" -> "BUILD G 4弾",
@@ -94,7 +99,7 @@ object Models {
     "168301" -> "BUILD G 1弾"
   )
 
-  val bSets = ListMap(
+  val bSets: ListMap[String, String] = ListMap(
     "168208" -> "BUILD MS 8弾",
     "168207" -> "BUILD MS 7弾",
     "168206" -> "BUILD MS 6弾",
@@ -105,14 +110,14 @@ object Models {
     "168201" -> "BUILD MS 1弾"
   )
 
-  val zSets = ListMap(
+  val zSets: ListMap[String, String] = ListMap(
     "168104" -> "ジオンの興亡 4弾",
     "168103" -> "ジオンの興亡 3弾",
     "168102" -> "ジオンの興亡 2弾",
     "168101" -> "ジオンの興亡 1弾"
   )
 
-  val origSets = ListMap(
+  val origSets: ListMap[String, String] = ListMap(
     "168006" -> "第6弾",
     "168005" -> "第5弾",
     "168004" -> "第4弾",
@@ -122,7 +127,7 @@ object Models {
     "168000" -> "第0弾"
   )
 
-  val promoSets = ListMap(
+  val promoSets: ListMap[String, String] = ListMap(
     "168701" -> "鉄血のオルフェンズ ブースターパック",
     "168908" -> "EVOL BOOST プロモーションカード",
     "168907" -> "DELTA WARS プロモーションカード",
@@ -131,19 +136,19 @@ object Models {
     "168904" -> "鉄血弾 プロモーションカード",
     "168903" -> "BUILD G・BUILD MS プロモーションカード",
     "168902" -> "ジオンの興亡 プロモーションカード",
-    "168901" -> "プロモーションカード"
+    "168901" -> "ガンダムトライエイジ プロモーションカード"
   )
 
   //private val combinedSets = oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
 
   //  private val setGroups = "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
 
-  val origSetsCht = ListMap(
-    "448004" -> "第4弾",
-    "448003" -> "第3弾",
-    "448002" -> "第2弾",
-    "448001" -> "第1弾"
-  )
+  //  val origSetsCht: ListMap[String, String] = ListMap(
+  //    "448004" -> "第4弾",
+  //    "448003" -> "第3弾",
+  //    "448002" -> "第2弾",
+  //    "448001" -> "第1弾"
+  //  )
 
   //  private val combinedSetsAsia = origSetsCht
   //
@@ -195,8 +200,9 @@ object Models {
   case object Japan extends Area {
 
     override val configName = "japan"
-    override val combinedSets = ebSets ++ dwSets ++ oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
-    override val setGroups = "eb" -> ebSets :: "dw" -> dwSets :: "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
+    override val combinedSets: ListMap[String, String] = ebSets ++ dwSets ++ oaSets ++ vsSets ++ tkrSets ++ tkSets ++ bgSets ++ bSets ++ zSets ++ origSets ++ promoSets
+    //    override val setGroups = "eb" -> ebSets :: "dw" -> dwSets :: "oa" -> oaSets :: "vs" -> vsSets :: "tkr" -> tkrSets :: "tk" -> tkSets :: "bg" -> bgSets :: "b" -> bSets :: "z" -> zSets :: "orig" -> origSets :: "promo" -> promoSets :: Nil
+    override val setGroups: List[(String, ListMap[String, String])] = "eb" -> ebSets :: "promo" -> promoSets :: Nil
 
     override val sheetNameMobileSuit = "モビルスーツ"
     override val sheetNamePilot = "パイロット"
@@ -219,7 +225,7 @@ object Models {
       "効果名", "効果", "パイロットスキル名", "パイロットスキル")
 
     override val boostTitles: List[String] = List("ブースト効果", "ポイント獲得条件",
-    "Lv1条件", "Lv1効果","Lv2条件", "Lv2効果","Lv3条件", "Lv3効果")
+      "Lv1条件", "Lv1効果", "Lv2条件", "Lv2効果", "Lv3条件", "Lv3効果")
 
     override val burstAttack: String = "アタック"
     override val burstDefence: String = "ディフェンス"

@@ -2,10 +2,9 @@ package org.lunary
 
 import java.security.SecureRandom
 
-import cats.effect.{ContextShift, IO, Resource}
+import cats.effect._
 import org.http4s.{Header, Headers, Method, Request, Uri, UrlForm}
 import org.lunary.Models.AreaConfig
-
 import org.http4s.client.blaze._
 import org.http4s.client._
 
