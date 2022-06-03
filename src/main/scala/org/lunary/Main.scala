@@ -21,13 +21,24 @@ object Main extends IOApp {
     val area = Japan
     val areaConfig = AreaConfig(config.getConfig(s"gundam.${area.configName}"), area)
 
-    val res = area.setGroups.map {
-      case (groupSymbol, sets) =>
-        val file = new File(folder, s"${areaConfig.filePrefix}-gundam-tryage-$groupSymbol.xlsx")
-        val excel = new Excel(config, areaConfig)
-        excel.generate(file, sets, clientResource)
-    }
-    val result: IO[List[Either[Throwable, Unit]]] = res.sequence
+    val work = arg.headOption.getOrElse("excel")
+
+    val result: IO[List[Either[Throwable, Unit]]] = (work match {
+      case "excel" =>
+        area.setGroups.map {
+          case (groupSymbol, sets) =>
+            val file = new File(folder, s"${areaConfig.filePrefix}-gundam-tryage-$groupSymbol.xlsx")
+            val excel = new Excel(config, areaConfig)
+            excel.generate(file, sets, clientResource)
+        }
+      case "html" =>
+        val html = new Html(config, areaConfig)
+        val res = area.setGroups.map {
+          case (groupSymbol, sets) =>
+            html.saveGroup(groupSymbol, sets, clientResource)
+        }
+        res.flatten
+    }).sequence
 
     val accumulatedResults: IO[Either[NonEmptyList[Throwable], Unit]] = result.map(_.foldLeft[Either[NonEmptyList[Throwable], Unit]](Right(Unit)) { (r, e) =>
       (r, e) match {
@@ -37,7 +48,6 @@ object Main extends IOApp {
         case (a, _) => a
       }
     })
-
 
     accumulatedResults.map { results =>
       results match {
